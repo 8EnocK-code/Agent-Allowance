@@ -20,11 +20,6 @@ export default function Landing({ onLaunch }) {
                 How it works
               </button>
             </div>
-            <div className="hero-meta">
-              <span><strong>Non-custodial</strong> · revoke anytime</span>
-              <span><strong>45 tests</strong> passing</span>
-              <span><strong>Unaudited</strong> pre-release</span>
-            </div>
           </div>
           <div className="hero-card">
             <h3>Owner policy · live example</h3>
