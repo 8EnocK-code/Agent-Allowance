@@ -11,7 +11,7 @@ export default function Landing({ onLaunch }) {
             <p className="hero-sub">
               BotGuard is a non-custodial allowance layer for AI agents on BOT Chain.
               You deposit BOT or ERC-20s, set per-transaction caps, 24-hour budgets,
-              allowlists and expiry — the agent operates strictly inside them, and every
+              allowlists and expiry. The agent operates strictly inside them, and every
               action leaves a verifiable on-chain receipt.
             </p>
             <div className="cta-row">
@@ -55,11 +55,11 @@ export default function Landing({ onLaunch }) {
           <p>Four independent guardrails combine on every spend. No single misconfiguration opens the vault.</p>
         </div>
         <div className="feat-grid">
-          <div className="feat"><div className="icon">◈</div><h3>Hard budgets</h3><p>Per-transaction caps plus a rolling 24-hour limit, enforced in the contract — not in the agent's prompt.</p></div>
+          <div className="feat"><div className="icon">◈</div><h3>Hard budgets</h3><p>Per-transaction caps plus a rolling 24-hour limit, enforced in the contract, not in the agent's prompt.</p></div>
           <div className="feat"><div className="icon">◎</div><h3>Destination allowlists</h3><p>Agents pay or call only addresses you approve. Swap routers and outputs are allowlisted separately.</p></div>
           <div className="feat"><div className="icon">⬣</div><h3>Instant revoke</h3><p>One transaction disables an agent across every token. Withdrawals always remain available to you.</p></div>
           <div className="feat"><div className="icon">✎</div><h3>Verifiable receipts</h3><p>Prompt and output hashes are committed on-chain. Anyone can confirm an answer existed, unaltered, at a time.</p></div>
-          <div className="feat"><div className="icon">⇄</div><h3>Bounded swaps</h3><p>Agents route through BDEX within budget. Proceeds return to your vault — never to the agent.</p></div>
+          <div className="feat"><div className="icon">⇄</div><h3>Bounded swaps</h3><p>Agents route through BDEX within budget. Proceeds return to your vault, never to the agent.</p></div>
           <div className="feat"><div className="icon">⬢</div><h3>Agent SDK</h3><p>Pre-flight checks explain blocks before gas is spent. Contracts remain the sole enforcement.</p></div>
         </div>
       </section>
@@ -92,7 +92,7 @@ export default function Landing({ onLaunch }) {
       <section className="cta-band">
         <div>
           <h2>Put your first agent on a budget today</h2>
-          <p>Connect a wallet, paste your deployment addresses, and set a policy. Testnet first — mainnet only with amounts you can afford to lose.</p>
+          <p>Connect a wallet, paste your deployment addresses, and set a policy. Testnet first. Mainnet only with amounts you can afford to lose.</p>
         </div>
         <div className="cta-row">
           <button onClick={onLaunch}>Open the console</button>
