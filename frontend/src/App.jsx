@@ -411,12 +411,12 @@ function AgentsTab({ vault, wallet, run, busy, pending }) {
     setErr("");
     setLoading(true);
     try {
-      if (!isAddress(agent)) throw new Error("Agent address is not valid.");
+      if (!isAddress(agentAddr)) throw new Error("Agent address is not valid.");
       const t = await withTimeout(tokenInfo(wallet.signer, token), READ_TIMEOUT_MS, RPC_TIMEOUT_MSG);
       const [enabled, p, remaining] = await withTimeout(Promise.all([
-        vault.agentEnabled(wallet.address, agent),
-        vault.policies(wallet.address, agent, t.address),
-        vault.remainingBudget(wallet.address, agent, t.address),
+        vault.agentEnabled(wallet.address, agentAddr),
+        vault.policies(wallet.address, agentAddr, t.address),
+        vault.remainingBudget(wallet.address, agentAddr, t.address),
       ]), READ_TIMEOUT_MS, RPC_TIMEOUT_MSG);
       const f = (v) => `${formatUnits(v, t.decimals)} ${t.symbol}`;
       setInfo({
@@ -448,12 +448,15 @@ function AgentsTab({ vault, wallet, run, busy, pending }) {
       const t = await tokenInfo(wallet.signer, token);
       const exp = expiry ? BigInt(Math.floor(new Date(expiry).getTime() / 1000)) : 0n;
       if (exp !== 0n && exp <= BigInt(Math.floor(Date.now() / 1000))) throw new Error("Expiry must be in the future.");
-      return vault.setPolicy(agent, t.address, parseAmount(daily, t.decimals), parseAmount(perTx, t.decimals), exp);
+      return vault.setPolicy(agentAddr, t.address, parseAmount(daily, t.decimals), parseAmount(perTx, t.decimals), exp);
     });
     if (ok) load();
   };
 
-  const need = isAddress(agent);
+  const agentAddr = (agent || "").trim();
+  const destAddr = (dest || "").trim();
+  const outTokAddr = (outTok || "").trim();
+  const need = isAddress(agentAddr);
   return (
     <>
       <section className="card">
@@ -471,7 +474,7 @@ function AgentsTab({ vault, wallet, run, busy, pending }) {
         <div className="row">
           <button onClick={savePolicy} disabled={!need || !daily.trim() || !perTx.trim() || !!policyError || busy}>{pending === "Set policy" ? "Saving…" : "Save policy"}</button>
           <button className="ghost" onClick={load} disabled={!need || busy || loading}>{loading ? "Loading…" : "Load current"}</button>
-          <button className="danger" onClick={() => run("Revoke agent", () => vault.revokeAgent(agent))} disabled={!need || busy}>{pending === "Revoke agent" ? "Revoking…" : "Revoke agent"}</button>
+          <button className="danger" onClick={() => run("Revoke agent", () => vault.revokeAgent(agentAddr))} disabled={!need || busy}>{pending === "Revoke agent" ? "Revoking…" : "Revoke agent"}</button>
         </div>
         {info && (
           <dl className="kv">
@@ -490,13 +493,13 @@ function AgentsTab({ vault, wallet, run, busy, pending }) {
         <p className="muted">Agents can only pay or call addresses you allow. The BDEX router goes here too; swap outputs are allowlisted separately.</p>
         <Field label="Destination (recipient or BDEX router)" value={dest} onChange={setDest} placeholder="0x…" />
         <div className="row">
-          <button onClick={() => run("Allow destination", () => vault.setDestination(agent, dest, true))} disabled={!need || !isAddress(dest) || busy}>Allow</button>
-          <button className="ghost" onClick={() => run("Remove destination", () => vault.setDestination(agent, dest, false))} disabled={!need || !isAddress(dest) || busy}>Remove</button>
+          <button onClick={() => run("Allow destination", () => vault.setDestination(agentAddr, destAddr, true))} disabled={!need || !isAddress(destAddr) || busy}>Allow</button>
+          <button className="ghost" onClick={() => run("Remove destination", () => vault.setDestination(agentAddr, destAddr, false))} disabled={!need || !isAddress(destAddr) || busy}>Remove</button>
         </div>
         <Field label="Swap output token" value={outTok} onChange={setOutTok} placeholder="0x… (e.g. USDT)" />
         <div className="row">
-          <button onClick={() => run("Allow output token", () => vault.setOutputToken(agent, outTok, true))} disabled={!need || !isAddress(outTok) || busy}>Allow</button>
-          <button className="ghost" onClick={() => run("Remove output token", () => vault.setOutputToken(agent, outTok, false))} disabled={!need || !isAddress(outTok) || busy}>Remove</button>
+          <button onClick={() => run("Allow output token", () => vault.setOutputToken(agentAddr, outTokAddr, true))} disabled={!need || !isAddress(outTokAddr) || busy}>Allow</button>
+          <button className="ghost" onClick={() => run("Remove output token", () => vault.setOutputToken(agentAddr, outTokAddr, false))} disabled={!need || !isAddress(outTokAddr) || busy}>Remove</button>
         </div>
       </section>
     </>
@@ -524,7 +527,7 @@ function Receipts({ pot }) {
   const verify = async () => {
     setErr(""); setRes(null); setWorking(true);
     try {
-      const [found, id, ts] = await withTimeout(pot.verify(agent, hashes.p, hashes.o), READ_TIMEOUT_MS, RPC_TIMEOUT_MSG);
+      const [found, id, ts] = await withTimeout(pot.verify(agent.trim(), hashes.p, hashes.o), READ_TIMEOUT_MS, RPC_TIMEOUT_MSG);
       setRes({ found, id: id.toString(), ts });
     } catch (e) { setErr(niceError(e)); } finally { setWorking(false); }
   };
@@ -552,7 +555,7 @@ function Receipts({ pot }) {
         )}
         <Field label="Agent address" value={agent} onChange={setAgent} placeholder="0x… (who committed it)" />
         <div className="row">
-          <button onClick={verify} disabled={!hashes.p || !hashes.o || !isAddress(agent) || working}>{working ? "Verifying…" : "Verify"}</button>
+          <button onClick={verify} disabled={!hashes.p || !hashes.o || !isAddress(agent.trim()) || working}>{working ? "Verifying…" : "Verify"}</button>
         </div>
         {res && (
           <p className={"verdict " + (res.found ? "good" : "bad")} role="status">
