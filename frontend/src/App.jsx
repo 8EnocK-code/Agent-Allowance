@@ -194,7 +194,7 @@ export default function App() {
             </section>
 
             <nav className="tabs">
-              {[["vault", "Vault"], ["agents", "Agents"], ["receipts", "Receipts"]].map(([k, l]) => (
+              {[["vault", "Vault"], ["agents", "Agents"], ["activity", "Activity"], ["receipts", "Receipts"]].map(([k, l]) => (
                 <button key={k} className={tab === k ? "tab on" : "tab"} onClick={() => setTab(k)} disabled={busy}>{l}</button>
               ))}
             </nav>
@@ -214,8 +214,12 @@ export default function App() {
               <p className="muted">Enter a valid AgentVault address above to manage deposits and agents.</p>
             ) : tab === "vault" ? (
               <VaultTab vault={vault} wallet={wallet} vaultAddr={vaultAddr} run={run} busy={busy} pending={pending} />
-            ) : (
+            ) : tab === "agents" ? (
               <AgentsTab vault={vault} wallet={wallet} run={run} busy={busy} pending={pending} />
+            ) : tab === "activity" ? (
+              <ActivityTab vault={vault} wallet={wallet} />
+            ) : (
+              <Receipts pot={pot} run={run} busy={busy} pending={pending} />
             )}
           </>
         )}
@@ -503,6 +507,89 @@ function AgentsTab({ vault, wallet, run, busy, pending }) {
         </div>
       </section>
     </>
+  );
+}
+
+function ActivityTab({ vault, wallet }) {
+  const [items, setItems] = useState(null);
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setErr("");
+    setLoading(true);
+    try {
+      const provider = wallet.signer.provider;
+      const latest = await withTimeout(provider.getBlockNumber(), READ_TIMEOUT_MS, RPC_TIMEOUT_MSG);
+      const fromBlock = Math.max(0, latest - 200000);
+      const owner = wallet.address;
+      const kinds = ["Deposited", "Withdrawn", "PolicySet", "DestinationSet", "OutputTokenSet", "Swapped", "Spent", "AgentRevoked"];
+      const logs = await withTimeout(
+        Promise.all(kinds.map((k) => vault.queryFilter(vault.filters[k](owner), fromBlock, latest))),
+        READ_TIMEOUT_MS, RPC_TIMEOUT_MSG
+      );
+      const byKind = Object.fromEntries(kinds.map((k, i) => [k, logs[i]]));
+      const decCache = {};
+      const fmt = async (token, value) => {
+        if (token === ZeroAddress) return `${formatUnits(value, 18)} BOT`;
+        if (!decCache[token]) {
+          try { decCache[token] = await tokenInfo(wallet.signer, token); }
+          catch { decCache[token] = { decimals: 18, symbol: "TOKEN" }; }
+        }
+        return `${formatUnits(value, decCache[token].decimals)} ${decCache[token].symbol}`;
+      };
+      const rows = [];
+      for (const e of byKind.Deposited) rows.push({ e, text: `Deposited ${await fmt(e.args.token, e.args.amount)}` });
+      for (const e of byKind.Withdrawn) rows.push({ e, text: `Withdrew ${await fmt(e.args.token, e.args.amount)}` });
+      for (const e of byKind.PolicySet) rows.push({ e, text: `Policy for ${short(e.args.agent)}: ${await fmt(e.args.token, e.args.dailyLimit)} / day, ${await fmt(e.args.token, e.args.perTxLimit)} per tx` });
+      for (const e of byKind.DestinationSet) rows.push({ e, text: `${e.args.allowed ? "Allowlisted" : "Removed"} ${short(e.args.destination)} for ${short(e.args.agent)}` });
+      for (const e of byKind.OutputTokenSet) rows.push({ e, text: `Swap output ${short(e.args.token)} ${e.args.allowed ? "allowlisted" : "removed"} for ${short(e.args.agent)}` });
+      for (const e of byKind.Swapped) rows.push({ e, text: `${short(e.args.agent)} swapped ${await fmt(e.args.tokenIn, e.args.amountIn)} for ${await fmt(e.args.tokenOut, e.args.amountOut)}` });
+      for (const e of byKind.Spent) rows.push({ e, text: `${short(e.args.agent)} paid ${await fmt(e.args.token, e.args.amount)} to ${short(e.args.to)}` });
+      for (const e of byKind.AgentRevoked) rows.push({ e, text: `Revoked ${short(e.args.agent)}` });
+      const blocks = [...new Set(rows.map((r) => r.e.blockNumber))];
+      const times = {};
+      await Promise.all(blocks.map(async (b) => {
+        try { times[b] = (await provider.getBlock(b)).timestamp; } catch { /* leave unknown */ }
+      }));
+      rows.sort((a, b) => b.e.blockNumber - a.e.blockNumber || (b.e.index ?? 0) - (a.e.index ?? 0));
+      setItems(rows.map((r) => ({
+        text: r.text, hash: r.e.transactionHash,
+        time: times[r.e.blockNumber] ? new Date(times[r.e.blockNumber] * 1000).toLocaleString() : "",
+      })));
+    } catch (e) {
+      setItems(null);
+      setErr(niceError(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [vault, wallet]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <section className="card">
+      <h2>Vault activity</h2>
+      <p className="muted">Every deposit, withdrawal, policy change and agent spend for your wallet, read from on-chain events (last ~200k blocks).</p>
+      <div className="row">
+        <button className="ghost" onClick={load} disabled={loading}>{loading ? "Loading…" : "Refresh"}</button>
+      </div>
+      {err && <div className="inline-err">{err}</div>}
+      {items && items.length === 0 && <p className="muted">No vault activity in range.</p>}
+      {items && items.length > 0 && (
+        <ul className="tx-list">
+          {items.map((t, i) => (
+            <li key={t.hash + i} className="tx-item">
+              <span className="tx-label">{t.text}</span>
+              <a className="explorer mono" href={txUrl(t.hash)} target="_blank" rel="noreferrer">
+                {t.hash.slice(0, 10)}…{t.hash.slice(-6)} ↗
+              </a>
+              {t.time && <span className="muted" style={{ fontSize: 12 }}>{t.time}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

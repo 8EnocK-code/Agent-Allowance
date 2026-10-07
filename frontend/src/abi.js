@@ -27,6 +27,10 @@ export const VAULT_ABI = [
   "event Withdrawn(address indexed owner, address indexed token, uint256 amount)",
   "event PolicySet(address indexed owner, address indexed agent, address indexed token, uint256 dailyLimit, uint256 perTxLimit, uint64 expiresAt)",
   "event AgentRevoked(address indexed owner, address indexed agent)",
+  "event DestinationSet(address indexed owner, address indexed agent, address indexed destination, bool allowed)",
+  "event OutputTokenSet(address indexed owner, address indexed agent, address indexed token, bool allowed)",
+  "event Spent(address indexed owner, address indexed agent, address indexed token, address to, uint256 amount, bytes4 selector)",
+  "event Swapped(address indexed owner, address indexed agent, address indexed router, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut)",
 ];
 
 export const POT_ABI = [
