@@ -209,7 +209,7 @@ export default function App() {
                 You are on chain {wallet.chainId}. <button className="ghost" onClick={switchNetwork}>Switch to BOT Chain Testnet (968)</button> to continue.
               </p>
             ) : tab === "receipts" ? (
-              <Receipts pot={pot} run={run} busy={busy} pending={pending} />
+              <Receipts pot={pot} />
             ) : !vault ? (
               <p className="muted">Enter a valid AgentVault address above to manage deposits and agents.</p>
             ) : tab === "vault" ? (
@@ -219,7 +219,7 @@ export default function App() {
             ) : tab === "activity" ? (
               <ActivityTab vault={vault} wallet={wallet} />
             ) : (
-              <Receipts pot={pot} run={run} busy={busy} pending={pending} />
+              <Receipts pot={pot} />
             )}
           </>
         )}
@@ -593,7 +593,7 @@ function ActivityTab({ vault, wallet }) {
   );
 }
 
-function Receipts({ pot, run, busy, pending }) {
+function Receipts({ pot }) {
   // Exact preimages of on-chain testnet receipt #1 (verified by hash).
   // Lets anyone demonstrate verification in one click, no copy-paste drift.
   const EXAMPLE = {
@@ -609,8 +609,6 @@ function Receipts({ pot, run, busy, pending }) {
   const [err, setErr] = useState("");
   const [count, setCount] = useState(null);
   const [working, setWorking] = useState(false);
-  const [cthought, setCthought] = useState({ prompt: "", output: "", model: "console-test" });
-  const [committedId, setCommittedId] = useState(null);
 
   const refreshCount = useCallback(async () => {
     try {
@@ -631,18 +629,6 @@ function Receipts({ pot, run, busy, pending }) {
       setRes({ found, id: id.toString(), ts });
     } catch (e) { setErr(niceError(e)); } finally { setWorking(false); }
   };
-  const commit = async () => {
-    setCommittedId(null);
-    const { ok } = await run("Commit thought", () =>
-      pot.commit(keccakText(cthought.prompt), keccakText(cthought.output), cthought.model.trim() || "console-test"));
-    if (ok) {
-      await refreshCount();
-      try {
-        setCommittedId((await pot.receiptCount()).toString());
-      } catch { /* count already refreshed */ }
-      setCthought({ prompt: "", output: "", model: "console-test" });
-    }
-  };
   const fetchReceipt = async () => {
     setErr(""); setRec(null); setWorking(true);
     try {
@@ -652,24 +638,8 @@ function Receipts({ pot, run, busy, pending }) {
   };
 
   if (!pot) return <p className="muted">Enter a valid ProofOfThought address above to verify receipts.</p>;
-  const modelTooLong = cthought.model.length > 64;
   return (
     <>
-      <section className="card">
-        <h2>Log a thought</h2>
-        <p className="muted">Commit your own receipt with the connected wallet. Only hashes go on-chain; the text never leaves your browser. Committing the same pair twice correctly fails.</p>
-        <label className="field"><span>Prompt</span><textarea rows={2} value={cthought.prompt} onChange={(e) => setCthought({ ...cthought, prompt: e.target.value })} placeholder="What was asked…" /></label>
-        <label className="field"><span>Output</span><textarea rows={2} value={cthought.output} onChange={(e) => setCthought({ ...cthought, output: e.target.value })} placeholder="What was answered…" /></label>
-        <Field label="Model label (max 64 chars)" value={cthought.model} onChange={(v) => setCthought({ ...cthought, model: v })} placeholder="console-test" />
-        {modelTooLong && <p className="hint">Model label is too long (max 64 characters).</p>}
-        <div className="row">
-          <button onClick={commit} disabled={!cthought.prompt || !cthought.output || modelTooLong || busy}>{pending === "Commit thought" ? "Committing…" : "Commit thought"}</button>
-        </div>
-        {committedId && (
-          <p className="verdict good" role="status">✓ Committed as receipt #{committedId}. Verify it below with the same text.</p>
-        )}
-      </section>
-
       <section className="card">
         <h2>Verify an AI answer</h2>
         <p className="muted">Paste the exact prompt and output. Only keccak256 hashes are compared on-chain, so content never leaves your browser.{count === null ? "" : count === "0" ? " No receipts committed yet." : count === "1" ? " 1 receipt committed so far." : ` ${count} receipts committed so far.`}</p>
