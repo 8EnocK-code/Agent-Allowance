@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrowserProvider, Contract, ZeroAddress, formatUnits, getAddress, id as keccakText, isAddress, parseUnits } from "ethers";
 import { ERC20_ABI, POT_ABI, VAULT_ABI } from "./abi.js";
 import { BOT_CHAIN, EXPLORER, addressUrl, ensureBotChain, niceError } from "./chain.js";
+import Landing from "./Landing.jsx";
 
 const short = (a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "");
 const when = (t) => (!t || t === 0n ? "never" : new Date(Number(t) * 1000).toLocaleString());
@@ -9,6 +10,7 @@ const LS_VAULT = "botguard.vault";
 const LS_POT = "botguard.pot";
 
 export default function App() {
+  const [route, setRoute] = useState("landing"); // landing | console
   const [wallet, setWallet] = useState(null); // { signer, address, chainId }
   const [vaultAddr, setVaultAddr] = useState(() => localStorage.getItem(LS_VAULT) || import.meta.env.VITE_VAULT_ADDRESS || "");
   const [potAddr, setPotAddr] = useState(() => localStorage.getItem(LS_POT) || import.meta.env.VITE_POT_ADDRESS || "");
@@ -45,7 +47,6 @@ export default function App() {
     }
   }, []);
 
-  // Keep the header in sync when the user changes account or network in the wallet.
   useEffect(() => {
     if (!window.ethereum?.on) return;
     const onAccounts = (accs) => {
@@ -61,7 +62,6 @@ export default function App() {
     };
   }, []);
 
-  // Run a transaction with status feedback.
   const run = useCallback(async (label, fn) => {
     try {
       setStatus({ kind: "busy", msg: `${label}: confirm in wallet…` });
@@ -88,78 +88,114 @@ export default function App() {
   );
   const wrongChain = wallet && wallet.chainId !== BOT_CHAIN.chainId;
 
+  const goSection = (id) => {
+    setRoute("landing");
+    setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }), 60);
+  };
+
   return (
-    <div className="shell">
-      <header>
-        <div>
-          <h1>BotGuard</h1>
-          <p className="tag">Hard budgets for AI agents. You hold the keys.</p>
-        </div>
-        {wallet ? (
-          <div className="addr-row">
-            <div className={"pill " + (wrongChain ? "bad" : "good")} title={wallet.address}>
-              {wrongChain ? `Wrong network (${wallet.chainId})` : `BOT Chain · ${short(wallet.address)}`}
+    <>
+      <div className="topbar">
+        <div className="topbar-inner">
+          <div className="brand" onClick={() => setRoute("landing")}>
+            <div className="brand-mark">B</div>
+            <div>
+              <span className="brand-name">BotGuard</span>
+              <span className="brand-sub">Agent allowances · BOT Chain</span>
             </div>
-            {wrongChain && <button className="ghost" onClick={switchNetwork}>Switch</button>}
-            <button className="ghost" onClick={() => setWallet(null)}>Disconnect</button>
           </div>
+          <div className="nav-links">
+            <button onClick={() => goSection("how")}>How it works</button>
+            <button onClick={() => setRoute("console")}>Owner console</button>
+            <button onClick={() => goSection("how")}>Docs</button>
+          </div>
+          <div className="topbar-actions">
+            {route === "landing" ? (
+              <button onClick={() => setRoute("console")}>Launch app</button>
+            ) : wallet ? (
+              <>
+                <div className={"pill " + (wrongChain ? "bad" : "good")} title={wallet.address}>
+                  {wrongChain ? `Wrong network (${wallet.chainId})` : `BOT Chain · ${short(wallet.address)}`}
+                </div>
+                {wrongChain && <button className="ghost" onClick={switchNetwork}>Switch</button>}
+                <button className="ghost" onClick={() => setWallet(null)}>Disconnect</button>
+              </>
+            ) : (
+              <button onClick={connect}>Connect wallet</button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="shell">
+        {route === "landing" ? (
+          <Landing onLaunch={() => setRoute("console")} />
         ) : (
-          <button onClick={connect}>Connect wallet</button>
+          <>
+            <div className="console-head">
+              <div>
+                <button className="back-link" onClick={() => setRoute("landing")}>← Back to overview</button>
+                <h2>Owner console</h2>
+                <p className="muted" style={{ margin: "4px 0 0" }}>Deposits, agent budgets, allowlists and receipt verification on BOT Chain (677).</p>
+              </div>
+              {!wallet && <button onClick={connect}>Connect wallet</button>}
+            </div>
+
+            <section className="card cfg">
+              <Field
+                label="AgentVault address"
+                value={vaultAddr}
+                onChange={setVaultAddr}
+                placeholder="0x… (from deployments/botMainnet.json)"
+                hint={isAddress(vaultAddr) ? null : "Paste a deployed AgentVault address, or deploy first with npm run deploy:mainnet."}
+              />
+              {isAddress(vaultAddr) && <ExplorerLink addr={vaultAddr} />}
+              <Field
+                label="ProofOfThought address"
+                value={potAddr}
+                onChange={setPotAddr}
+                placeholder="0x… (from deployments/botMainnet.json)"
+                hint={isAddress(potAddr) ? null : "Paste a deployed ProofOfThought address."}
+              />
+              {isAddress(potAddr) && <ExplorerLink addr={potAddr} />}
+            </section>
+
+            <nav className="tabs">
+              {[["vault", "Vault"], ["agents", "Agents"], ["receipts", "Receipts"]].map(([k, l]) => (
+                <button key={k} className={tab === k ? "tab on" : "tab"} onClick={() => setTab(k)} disabled={busy}>{l}</button>
+              ))}
+            </nav>
+
+            {status.msg && <div className={"status " + status.kind} role="status">{status.msg}</div>}
+
+            {!wallet ? (
+              <p className="muted">Connect a wallet to continue. BotGuard runs on BOT Chain (chain ID 677).</p>
+            ) : wrongChain ? (
+              <p className="muted">
+                You are on chain {wallet.chainId}. <button className="ghost" onClick={switchNetwork}>Switch to BOT Chain (677)</button> to continue.
+              </p>
+            ) : tab === "receipts" ? (
+              <Receipts pot={pot} />
+            ) : !vault ? (
+              <p className="muted">Enter a valid AgentVault address above to manage deposits and agents.</p>
+            ) : tab === "vault" ? (
+              <VaultTab vault={vault} wallet={wallet} vaultAddr={vaultAddr} run={run} busy={busy} />
+            ) : (
+              <AgentsTab vault={vault} wallet={wallet} run={run} busy={busy} />
+            )}
+          </>
         )}
-      </header>
 
-      <section className="card cfg">
-        <Field
-          label="AgentVault address"
-          value={vaultAddr}
-          onChange={setVaultAddr}
-          placeholder="0x… (from deployments/botMainnet.json)"
-          hint={isAddress(vaultAddr) ? null : "Paste a deployed AgentVault address, or deploy first with npm run deploy:mainnet."}
-        />
-        {isAddress(vaultAddr) && <ExplorerLink addr={vaultAddr} />}
-        <Field
-          label="ProofOfThought address"
-          value={potAddr}
-          onChange={setPotAddr}
-          placeholder="0x… (from deployments/botMainnet.json)"
-          hint={isAddress(potAddr) ? null : "Paste a deployed ProofOfThought address."}
-        />
-        {isAddress(potAddr) && <ExplorerLink addr={potAddr} />}
-      </section>
-
-      <nav>
-        {[["vault", "Vault"], ["agents", "Agents"], ["receipts", "Receipts"]].map(([k, l]) => (
-          <button key={k} className={tab === k ? "tab on" : "tab"} onClick={() => setTab(k)} disabled={busy}>{l}</button>
-        ))}
-      </nav>
-
-      {status.msg && <div className={"status " + status.kind} role="status">{status.msg}</div>}
-
-      {!wallet ? (
-        <p className="muted">Connect a wallet to continue. BotGuard runs on BOT Chain (chain ID 677).</p>
-      ) : wrongChain ? (
-        <p className="muted">
-          You are on chain {wallet.chainId}. <button className="ghost" onClick={switchNetwork}>Switch to BOT Chain (677)</button> to continue.
-        </p>
-      ) : tab === "receipts" ? (
-        <Receipts pot={pot} />
-      ) : !vault ? (
-        <p className="muted">Enter a valid AgentVault address above to manage deposits and agents.</p>
-      ) : tab === "vault" ? (
-        <VaultTab vault={vault} wallet={wallet} vaultAddr={vaultAddr} run={run} busy={busy} />
-      ) : (
-        <AgentsTab vault={vault} wallet={wallet} run={run} busy={busy} />
-      )}
-
-      <footer>
-        <span>BotGuard · unaudited pre-release — use only what you can afford to lose.</span>
-        <a href="https://www.botchain.ai" target="_blank" rel="noreferrer">Website</a>
-        <a href={EXPLORER} target="_blank" rel="noreferrer">Explorer</a>
-        <a href="https://faucet.botchain.ai" target="_blank" rel="noreferrer">Faucet</a>
-        <a href="https://dex.botchain.ai/#/swap" target="_blank" rel="noreferrer">DEX</a>
-        <a href="https://dev-docs.botchain.ai/docs/Developers/quick-guide/" target="_blank" rel="noreferrer">Docs</a>
-      </footer>
-    </div>
+        <footer className="site-footer">
+          <span>BotGuard · unaudited pre-release — use only what you can afford to lose.</span>
+          <a href="https://www.botchain.ai" target="_blank" rel="noreferrer">Website</a>
+          <a href={EXPLORER} target="_blank" rel="noreferrer">Explorer</a>
+          <a href="https://faucet.botchain.ai" target="_blank" rel="noreferrer">Faucet</a>
+          <a href="https://dex.botchain.ai/#/swap" target="_blank" rel="noreferrer">DEX</a>
+          <a href="https://dev-docs.botchain.ai/docs/Developers/quick-guide/" target="_blank" rel="noreferrer">Docs</a>
+        </footer>
+      </div>
+    </>
   );
 }
 
@@ -200,7 +236,6 @@ function CopyButton({ text }) {
   );
 }
 
-// Resolve a token input ("" = native BOT) into { address, decimals, symbol }.
 async function tokenInfo(signer, input) {
   const trimmed = (input || "").trim();
   if (!trimmed) return { address: ZeroAddress, decimals: 18, symbol: "BOT" };
@@ -264,6 +299,7 @@ function VaultTab({ vault, wallet, vaultAddr, run, busy }) {
   return (
     <section className="card">
       <h2>Your vault balance</h2>
+      <p className="muted">Deposits credit what the vault actually receives. Withdrawals always work, even after revoke.</p>
       <Field label="Token address (leave empty for native BOT)" value={token} onChange={setToken} placeholder="0x… or empty" />
       <div className="row">
         <button className="ghost" onClick={refresh} disabled={busy}>Check balance</button>
@@ -274,7 +310,7 @@ function VaultTab({ vault, wallet, vaultAddr, run, busy }) {
         <button onClick={deposit} disabled={!amount.trim() || busy}>Deposit</button>
         <button className="ghost" onClick={withdraw} disabled={!amount.trim() || busy}>Withdraw</button>
       </div>
-      <p className="muted">Deposits credit what the vault actually receives (safe with fee-on-transfer tokens). Withdrawals always work, even after you revoke an agent. Never send BOT directly to the vault address — use Deposit.</p>
+      <p className="muted">Never send BOT directly to the vault address — always use Deposit.</p>
     </section>
   );
 }
@@ -422,8 +458,8 @@ function Receipts({ pot }) {
         <label className="field"><span>Output</span><textarea rows={3} value={text.output} onChange={(e) => setText({ ...text, output: e.target.value })} placeholder="Exact model output…" /></label>
         {(hashes.p || hashes.o) && (
           <dl className="kv">
-            <dt>Prompt hash</dt><dd className="addr-row"><span className="mono">{short(hashes.p)}{hashes.p}</span><CopyButton text={hashes.p} /></dd>
-            <dt>Output hash</dt><dd className="addr-row"><span className="mono">{short(hashes.o)}{hashes.o}</span><CopyButton text={hashes.o} /></dd>
+            <dt>Prompt hash</dt><dd className="addr-row"><span className="mono">{hashes.p}</span><CopyButton text={hashes.p} /></dd>
+            <dt>Output hash</dt><dd className="addr-row"><span className="mono">{hashes.o}</span><CopyButton text={hashes.o} /></dd>
           </dl>
         )}
         <Field label="Agent address" value={agent} onChange={setAgent} placeholder="0x… (who committed it)" />
