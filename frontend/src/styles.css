@@ -192,6 +192,29 @@ button.btn-secondary:hover { background: rgba(255,255,255,0.2); }
 .addr-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .copy-btn { padding: 5px 10px; font-size: 12px; }
 .hint { color: var(--muted); font-size: 12.5px; margin: 2px 0 12px; display: block; }
+.inline-err {
+  background: var(--bad-bg); border: 1px solid #f0b6ae; color: var(--bad);
+  border-radius: 10px; padding: 10px 14px; font-size: 13.5px; margin: 0 0 12px;
+}
+.spinner {
+  display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid rgba(16, 41, 90, 0.25); border-top-color: var(--navy-900);
+  animation: spin 0.7s linear infinite; vertical-align: -1px; margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.tx-card h2 { font-size: 15px; }
+.tx-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.tx-item { display: flex; align-items: center; gap: 10px; font-size: 13px; flex-wrap: wrap; }
+.tx-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.tx-dot.pending { background: var(--blue-500); animation: pulse 1.2s ease-in-out infinite; }
+.tx-dot.confirmed { background: var(--good); }
+.tx-dot.failed { background: var(--bad); }
+@keyframes pulse { 50% { opacity: 0.35; } }
+.tx-label { font-weight: 600; color: var(--navy-900); }
+.tx-state { margin-left: auto; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.tx-state.pending { color: var(--blue-600); }
+.tx-state.confirmed { color: var(--good); }
+.tx-state.failed { color: var(--bad); }
 footer.site-footer { margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
 footer.site-footer a { color: var(--muted); text-decoration: none; }
 footer.site-footer a:hover { color: var(--navy-900); }

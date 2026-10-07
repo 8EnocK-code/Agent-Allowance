@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrowserProvider, Contract, ZeroAddress, formatUnits, getAddress, id as keccakText, isAddress, parseUnits } from "ethers";
 import { ERC20_ABI, POT_ABI, VAULT_ABI } from "./abi.js";
-import { BOT_CHAIN, EXPLORER, addressUrl, ensureBotChain, niceError } from "./chain.js";
+import { BOT_CHAIN, EXPLORER, addressUrl, ensureBotChain, niceError, txUrl } from "./chain.js";
 import Landing from "./Landing.jsx";
 
 const short = (a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "");
@@ -16,6 +16,8 @@ export default function App() {
   const [potAddr, setPotAddr] = useState(() => localStorage.getItem(LS_POT) || import.meta.env.VITE_POT_ADDRESS || "");
   const [tab, setTab] = useState("vault");
   const [status, setStatus] = useState({ kind: "idle", msg: "" });
+  const [pending, setPending] = useState(null); // label of the in-flight action
+  const [txs, setTxs] = useState([]); // { label, hash, state: pending|confirmed|failed }
   const busy = status.kind === "busy";
 
   useEffect(() => { localStorage.setItem(LS_VAULT, vaultAddr); }, [vaultAddr]);
@@ -63,18 +65,31 @@ export default function App() {
   }, []);
 
   const run = useCallback(async (label, fn) => {
+    setPending(label);
     try {
       setStatus({ kind: "busy", msg: `${label}: confirm in wallet…` });
       const tx = await fn();
+      let hash = tx?.hash || null;
       if (tx?.wait) {
-        setStatus({ kind: "busy", msg: `${label}: waiting for confirmation…` });
-        await tx.wait();
+        if (hash) {
+          setTxs((t) => [{ label, hash, state: "pending", time: Date.now() }, ...t].slice(0, 6));
+          setStatus({ kind: "busy", msg: `${label}: submitted, waiting for confirmation…` });
+        } else {
+          setStatus({ kind: "busy", msg: `${label}: waiting for confirmation…` });
+        }
+        const receipt = await tx.wait();
+        hash = receipt?.hash || hash;
+        const confirmed = receipt?.status !== 0;
+        if (hash) setTxs((t) => t.map((x) => (x.hash === hash ? { ...x, state: confirmed ? "confirmed" : "failed" } : x)));
+        if (!confirmed) throw new Error("Transaction reverted on-chain.");
       }
       setStatus({ kind: "ok", msg: `${label}: done.` });
-      return true;
+      return { ok: true, hash };
     } catch (e) {
       setStatus({ kind: "err", msg: `${label}: ${niceError(e)}` });
-      return false;
+      return { ok: false, hash: null };
+    } finally {
+      setPending(null);
     }
   }, []);
 
@@ -166,7 +181,8 @@ export default function App() {
               ))}
             </nav>
 
-            {status.msg && <div className={"status " + status.kind} role="status">{status.msg}</div>}
+            {status.msg && <div className={"status " + status.kind} role="status">{busy && <span className="spinner" />} {status.msg}</div>}
+            {txs.length > 0 && <TxHistory txs={txs} />}
 
             {!wallet ? (
               <p className="muted">Connect a wallet to continue. BotGuard runs on BOT Chain Testnet (chain ID 968).</p>
@@ -179,9 +195,9 @@ export default function App() {
             ) : !vault ? (
               <p className="muted">Enter a valid AgentVault address above to manage deposits and agents.</p>
             ) : tab === "vault" ? (
-              <VaultTab vault={vault} wallet={wallet} vaultAddr={vaultAddr} run={run} busy={busy} />
+              <VaultTab vault={vault} wallet={wallet} vaultAddr={vaultAddr} run={run} busy={busy} pending={pending} />
             ) : (
-              <AgentsTab vault={vault} wallet={wallet} run={run} busy={busy} />
+              <AgentsTab vault={vault} wallet={wallet} run={run} busy={busy} pending={pending} />
             )}
           </>
         )}
@@ -215,6 +231,28 @@ function ExplorerLink({ addr, label = "View on scan.botchain.ai" }) {
       <span className="mono muted">{short(addr)}</span>
       <a className="explorer" href={addressUrl(addr)} target="_blank" rel="noreferrer">{label} ↗</a>
     </div>
+  );
+}
+
+function TxHistory({ txs }) {
+  return (
+    <section className="card tx-card">
+      <h2>Recent transactions</h2>
+      <ul className="tx-list">
+        {txs.map((t) => (
+          <li key={t.hash} className="tx-item">
+            <span className={"tx-dot " + t.state} />
+            <span className="tx-label">{t.label}</span>
+            <a className="explorer mono" href={txUrl(t.hash)} target="_blank" rel="noreferrer">
+              {t.hash.slice(0, 10)}…{t.hash.slice(-6)} ↗
+            </a>
+            <span className={"tx-state " + t.state}>
+              {t.state === "pending" ? "confirming" : t.state}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -257,24 +295,26 @@ function parseAmount(str, decimals) {
   }
 }
 
-function VaultTab({ vault, wallet, vaultAddr, run, busy }) {
+function VaultTab({ vault, wallet, vaultAddr, run, busy, pending }) {
   const [token, setToken] = useState("");
   const [amount, setAmount] = useState("");
   const [bal, setBal] = useState(null);
+  const [err, setErr] = useState("");
 
   const refresh = async () => {
+    setErr("");
     try {
       const t = await tokenInfo(wallet.signer, token);
       const b = await vault.balances(wallet.address, t.address);
       setBal(`${formatUnits(b, t.decimals)} ${t.symbol}`);
     } catch (e) {
       setBal(null);
-      alert(niceError(e));
+      setErr(niceError(e));
     }
   };
 
   const deposit = async () => {
-    const ok = await run("Deposit", async () => {
+    const { ok } = await run("Deposit", async () => {
       const t = await tokenInfo(wallet.signer, token);
       const amt = parseAmount(amount, t.decimals);
       if (t.address === ZeroAddress) return vault.depositNative({ value: amt });
@@ -289,7 +329,7 @@ function VaultTab({ vault, wallet, vaultAddr, run, busy }) {
   };
 
   const withdraw = async () => {
-    const ok = await run("Withdraw", async () => {
+    const { ok } = await run("Withdraw", async () => {
       const t = await tokenInfo(wallet.signer, token);
       return vault.withdraw(t.address, parseAmount(amount, t.decimals));
     });
@@ -305,17 +345,18 @@ function VaultTab({ vault, wallet, vaultAddr, run, busy }) {
         <button className="ghost" onClick={refresh} disabled={busy}>Check balance</button>
         {bal && <span className="big">{bal}</span>}
       </div>
+      {err && <div className="inline-err">{err}</div>}
       <Field label="Amount" value={amount} onChange={setAmount} placeholder="0.0" />
       <div className="row">
-        <button onClick={deposit} disabled={!amount.trim() || busy}>Deposit</button>
-        <button className="ghost" onClick={withdraw} disabled={!amount.trim() || busy}>Withdraw</button>
+        <button onClick={deposit} disabled={!amount.trim() || busy}>{pending === "Deposit" ? "Depositing…" : "Deposit"}</button>
+        <button className="ghost" onClick={withdraw} disabled={!amount.trim() || busy}>{pending === "Withdraw" ? "Withdrawing…" : "Withdraw"}</button>
       </div>
       <p className="muted">Never send BOT directly to the vault address. Always use Deposit.</p>
     </section>
   );
 }
 
-function AgentsTab({ vault, wallet, run, busy }) {
+function AgentsTab({ vault, wallet, run, busy, pending }) {
   const [agent, setAgent] = useState("");
   const [token, setToken] = useState("");
   const [daily, setDaily] = useState("");
@@ -324,8 +365,10 @@ function AgentsTab({ vault, wallet, run, busy }) {
   const [dest, setDest] = useState("");
   const [outTok, setOutTok] = useState("");
   const [info, setInfo] = useState(null);
+  const [err, setErr] = useState("");
 
   const load = async () => {
+    setErr("");
     try {
       if (!isAddress(agent)) throw new Error("Agent address is not valid.");
       const t = await tokenInfo(wallet.signer, token);
@@ -343,7 +386,7 @@ function AgentsTab({ vault, wallet, run, busy }) {
       });
     } catch (e) {
       setInfo(null);
-      alert(niceError(e));
+      setErr(niceError(e));
     }
   };
 
@@ -357,8 +400,8 @@ function AgentsTab({ vault, wallet, run, busy }) {
   })();
 
   const savePolicy = async () => {
-    if (policyError) { alert(policyError); return; }
-    const ok = await run("Set policy", async () => {
+    if (policyError) return; // already shown inline above the button
+    const { ok } = await run("Set policy", async () => {
       const t = await tokenInfo(wallet.signer, token);
       const exp = expiry ? BigInt(Math.floor(new Date(expiry).getTime() / 1000)) : 0n;
       if (exp !== 0n && exp <= BigInt(Math.floor(Date.now() / 1000))) throw new Error("Expiry must be in the future.");
@@ -380,11 +423,12 @@ function AgentsTab({ vault, wallet, run, busy }) {
           <Field label="Per-transaction limit" value={perTx} onChange={setPerTx} placeholder="e.g. 1.0" />
         </div>
         {policyError && <p className="hint">{policyError}</p>}
+        {err && <div className="inline-err">{err}</div>}
         <Field label="Expires (optional, empty = never)" type="datetime-local" value={expiry} onChange={setExpiry} />
         <div className="row">
-          <button onClick={savePolicy} disabled={!need || !daily.trim() || !perTx.trim() || !!policyError || busy}>Save policy</button>
+          <button onClick={savePolicy} disabled={!need || !daily.trim() || !perTx.trim() || !!policyError || busy}>{pending === "Set policy" ? "Saving…" : "Save policy"}</button>
           <button className="ghost" onClick={load} disabled={!need || busy}>Load current</button>
-          <button className="danger" onClick={() => run("Revoke agent", () => vault.revokeAgent(agent))} disabled={!need || busy}>Revoke agent</button>
+          <button className="danger" onClick={() => run("Revoke agent", () => vault.revokeAgent(agent))} disabled={!need || busy}>{pending === "Revoke agent" ? "Revoking…" : "Revoke agent"}</button>
         </div>
         {info && (
           <dl className="kv">
