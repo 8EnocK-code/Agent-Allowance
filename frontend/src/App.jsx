@@ -544,7 +544,7 @@ function Receipts({ pot }) {
     <>
       <section className="card">
         <h2>Verify an AI answer</h2>
-        <p className="muted">Paste the exact prompt and output. Only keccak256 hashes are compared on-chain, so content never leaves your browser.{count ? ` ${count} receipt(s) committed so far.` : ""}</p>
+        <p className="muted">Paste the exact prompt and output. Only keccak256 hashes are compared on-chain, so content never leaves your browser.{count === null ? "" : count === "0" ? " No receipts committed yet." : ` ${count} receipt(s) committed so far.`}</p>
         <label className="field"><span>Prompt</span><textarea rows={3} value={text.prompt} onChange={(e) => setText({ ...text, prompt: e.target.value })} placeholder="Exact prompt text…" /></label>
         <label className="field"><span>Output</span><textarea rows={3} value={text.output} onChange={(e) => setText({ ...text, output: e.target.value })} placeholder="Exact model output…" /></label>
         {(hashes.p || hashes.o) && (
@@ -566,7 +566,7 @@ function Receipts({ pot }) {
 
       <section className="card">
         <h2>Look up receipt by ID</h2>
-        <Field label="Receipt ID" value={rid} onChange={setRid} placeholder={count ? `1 … ${count}` : "1"} />
+        <Field label="Receipt ID" value={rid} onChange={setRid} placeholder={count && count !== "0" ? `1 … ${count}` : "1"} />
         <button className="ghost" onClick={fetchReceipt} disabled={!/^\d+$/.test(rid.trim()) || rid.trim() === "0" || working}>{working ? "Fetching…" : "Fetch"}</button>
         {rec && (
           <dl className="kv">
