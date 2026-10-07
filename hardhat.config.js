@@ -1,0 +1,44 @@
+require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
+
+const PK = process.env.PRIVATE_KEY;
+const accounts = PK ? [PK] : [];
+
+/** @type import('hardhat/config').HardhatUserConfig */
+module.exports = {
+  solidity: {
+    version: "0.8.24",
+    settings: {
+      optimizer: { enabled: true, runs: 200 },
+      // "paris" avoids PUSH0, the safest choice for a chain whose EVM version is not documented
+      evmVersion: "paris",
+    },
+  },
+  networks: {
+    botMainnet: {
+      url: process.env.MAINNET_RPC_URL || "https://rpc.botchain.ai",
+      chainId: 677,
+      accounts,
+    },
+    botTestnet: {
+      // The integration guide gives the testnet chain ID (968) but no RPC URL.
+      url: process.env.TESTNET_RPC_URL || "",
+      chainId: 968,
+      accounts,
+    },
+  },
+  etherscan: {
+    // Only needed if the explorer exposes an Etherscan-compatible API (not stated in the guide).
+    apiKey: { botMainnet: process.env.BOTSCAN_API_KEY || "no-key", botTestnet: process.env.BOTSCAN_API_KEY || "no-key" },
+    customChains: [
+      {
+        network: "botMainnet",
+        chainId: 677,
+        urls: {
+          apiURL: process.env.BOTSCAN_API_URL || "https://scan.botchain.ai/api",
+          browserURL: "https://scan.botchain.ai",
+        },
+      },
+    ],
+  },
+};

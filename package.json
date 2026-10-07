@@ -1,0 +1,22 @@
+{
+  "name": "botguard",
+  "version": "0.1.0",
+  "description": "BotGuard: spending-limited vaults and verifiable receipts for AI agents on BOT Chain",
+  "license": "MIT",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:testnet": "hardhat run scripts/deploy.js --network botTestnet",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network botMainnet",
+    "verify:testnet": "hardhat run scripts/verify.js --network botTestnet",
+    "verify:mainnet": "hardhat run scripts/verify.js --network botMainnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.0",
+    "dotenv": "^16.4.5"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2"
+  }
+}
