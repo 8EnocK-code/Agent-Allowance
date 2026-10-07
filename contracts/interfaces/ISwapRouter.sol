@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+/// @notice Minimal Uniswap-V3-style SwapRouter interface (the variant with `deadline` in the params).
+/// @dev BDEX's V3 deployment lists a `swapRouter` next to a factory and quoter. Confirm on chain that it
+///      exposes this exact `exactInputSingle` signature before mainnet use (see README, phase 4).
+interface ISwapRouter {
+    struct ExactInputSingleParams {
+        address tokenIn;
+        address tokenOut;
+        uint24 fee;
+        address recipient;
+        uint256 deadline;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+        uint160 sqrtPriceLimitX96;
+    }
+
+    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
+}

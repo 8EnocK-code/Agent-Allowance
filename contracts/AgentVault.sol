@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 
 /**
  * @title AgentVault
@@ -16,6 +17,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
  *           - an optional expiry
  *         The owner can revoke an agent instantly and withdraw at any time.
  *         The agent never holds the owner's funds or keys.
+ *         Agents can also swap vault tokens through BDEX (swapExactIn); proceeds stay in the vault.
  *
  *         Token address(0) represents the native coin (BOT).
  */
@@ -41,6 +43,8 @@ contract AgentVault is ReentrancyGuard {
     mapping(address => mapping(address => mapping(address => Policy))) public policies;
     // owner => agent => destination => allowed
     mapping(address => mapping(address => mapping(address => bool))) public allowedDestination;
+    // owner => agent => token => allowed as a swap output
+    mapping(address => mapping(address => mapping(address => bool))) public allowedOutputToken;
 
     event Deposited(address indexed owner, address indexed token, uint256 amount);
     event Withdrawn(address indexed owner, address indexed token, uint256 amount);
@@ -51,6 +55,16 @@ contract AgentVault is ReentrancyGuard {
         uint256 dailyLimit,
         uint256 perTxLimit,
         uint64 expiresAt
+    );
+    event OutputTokenSet(address indexed owner, address indexed agent, address indexed token, bool allowed);
+    event Swapped(
+        address indexed owner,
+        address indexed agent,
+        address indexed router,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 amountOut
     );
     event DestinationSet(address indexed owner, address indexed agent, address indexed destination, bool allowed);
     event AgentRevoked(address indexed owner, address indexed agent);
@@ -75,6 +89,11 @@ contract AgentVault is ReentrancyGuard {
     error DestinationNotAllowed();
     error TransferFailed();
     error DirectTransferNotAllowed();
+    error NativeNotSupported();
+    error SameToken();
+    error OutputTokenNotAllowed();
+    error SlippageExceeded();
+    error RouterOverspent();
 
     // ---------------------------------------------------------------- owner
 
@@ -137,6 +156,13 @@ contract AgentVault is ReentrancyGuard {
         emit DestinationSet(msg.sender, agent, destination, allowed);
     }
 
+    /// @notice Allow or disallow a token as the output of agent swaps.
+    function setOutputToken(address agent, address token, bool allowed) external {
+        if (agent == address(0) || token == address(0)) revert ZeroAddress();
+        allowedOutputToken[msg.sender][agent][token] = allowed;
+        emit OutputTokenSet(msg.sender, agent, token, allowed);
+    }
+
     /// @notice Instantly disable an agent across all tokens. Re-enable by calling setPolicy again.
     function revokeAgent(address agent) external {
         agentEnabled[msg.sender][agent] = false;
@@ -169,6 +195,59 @@ contract AgentVault is ReentrancyGuard {
             }
         }
         emit Spent(owner, msg.sender, NATIVE, target, amount, data.length >= 4 ? bytes4(data[:4]) : bytes4(0));
+    }
+
+    /// @notice Agent swaps `amountIn` of `tokenIn` held in `owner`'s vault for `tokenOut` through a
+    ///         Uniswap-V3-style router (BDEX). Proceeds are credited back to the owner's vault balance,
+    ///         never to the agent.
+    /// @dev The router must be an allowlisted destination, `tokenOut` must be an allowlisted output token,
+    ///      and `amountIn` counts against the agent's `tokenIn` policy. The router is approved for exactly
+    ///      `amountIn` for the duration of the call, then the approval is reset to zero.
+    function swapExactIn(
+        address owner,
+        address router,
+        address tokenIn,
+        address tokenOut,
+        uint24 fee,
+        uint256 amountIn,
+        uint256 minAmountOut,
+        uint256 deadline
+    ) external nonReentrant returns (uint256 amountOut) {
+        if (tokenIn == NATIVE || tokenOut == NATIVE) revert NativeNotSupported();
+        if (tokenIn == tokenOut) revert SameToken();
+        if (minAmountOut == 0) revert ZeroAmount();
+
+        // checks agent, policy, router allowlist, limits; deducts amountIn from the owner's balance
+        _spend(owner, msg.sender, tokenIn, router, amountIn);
+        if (!allowedOutputToken[owner][msg.sender][tokenOut]) revert OutputTokenNotAllowed();
+
+        uint256 inBefore = IERC20(tokenIn).balanceOf(address(this));
+        uint256 outBefore = IERC20(tokenOut).balanceOf(address(this));
+
+        IERC20(tokenIn).forceApprove(router, amountIn);
+        ISwapRouter(router).exactInputSingle(
+            ISwapRouter.ExactInputSingleParams({
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                fee: fee,
+                recipient: address(this),
+                deadline: deadline,
+                amountIn: amountIn,
+                amountOutMinimum: minAmountOut,
+                sqrtPriceLimitX96: 0
+            })
+        );
+        IERC20(tokenIn).forceApprove(router, 0);
+
+        uint256 spent = inBefore - IERC20(tokenIn).balanceOf(address(this));
+        if (spent > amountIn) revert RouterOverspent();
+        amountOut = IERC20(tokenOut).balanceOf(address(this)) - outBefore;
+        if (amountOut < minAmountOut) revert SlippageExceeded();
+
+        // credit proceeds, and refund any input the router did not consume (partial fill)
+        if (spent < amountIn) balances[owner][tokenIn] += amountIn - spent;
+        balances[owner][tokenOut] += amountOut;
+        emit Swapped(owner, msg.sender, router, tokenIn, tokenOut, spent, amountOut);
     }
 
     // ---------------------------------------------------------------- views

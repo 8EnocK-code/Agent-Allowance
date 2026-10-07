@@ -11,15 +11,17 @@ A safe wallet layer for AI agents on **BOT Chain** (EVM, chain ID 677).
 |---|---|---|
 | 0 | Repo foundation, Hardhat config | done |
 | 1 | `AgentVault`, `ProofOfThought` | done |
-| 2 | Tests, security notes | done (see "Not yet run") |
+| 2 | Tests, security notes | done |
 | 3 | Deploy and verify scripts | done |
-| 4 | BDEX swap integration | planned |
+| 4 | BDEX swap integration (`swapExactIn`) | done, router ABI unconfirmed on chain |
 | 5 | Front end | planned |
 | 6 | Agent SDK and demo | planned |
 | 7 | Docs and release | planned |
 | 8 | ERC-4337 session keys | optional |
 
-**Not yet run:** the code was written without network access, so it has not been compiled or tested. Run `npm test` before trusting it.
+**Test status:** 36 tests pass (compiled with solc 0.8.24, `paris` target). Tests use mock tokens and a mock router, so nothing has run against BOT Chain yet. The Hardhat compiler download was not reachable from the build sandbox, so the suite was run with solc-js; `npm test` should behave the same on a normal machine.
+
+**Phase 4 caveat:** `swapExactIn` targets the Uniswap-V3 `SwapRouter` ABI (`exactInputSingle` with `deadline`). BDEX lists a V3 `swapRouter` in the integration guide, but the exact signature is not confirmed. Check it on https://scan.botchain.ai before mainnet use. Addresses are in `config/bdex.json`.
 
 ## Quick start
 
@@ -46,8 +48,10 @@ Addresses are written to `deployments/<network>.json`.
 2. Owner: `setPolicy(agent, token, dailyLimit, perTxLimit, expiresAt)`
 3. Owner: `setDestination(agent, recipient, true)`
 4. Agent: `pay(owner, token, recipient, amount)` or `callTarget(owner, target, amount, data)`
-5. Agent: `ProofOfThought.commit(promptHash, outputHash, model)` to log what it did
-6. Owner: `revokeAgent(agent)` to cut access instantly
+5. Owner (for swaps): `setOutputToken(agent, tokenOut, true)`, and allowlist the BDEX router with `setDestination`
+6. Agent: `swapExactIn(owner, router, tokenIn, tokenOut, fee, amountIn, minAmountOut, deadline)`. Proceeds go back into the owner's vault balance, never to the agent
+7. Agent: `ProofOfThought.commit(promptHash, outputHash, model)` to log what it did
+8. Owner: `revokeAgent(agent)` to cut access instantly
 
 Token address `0x0` means native BOT.
 

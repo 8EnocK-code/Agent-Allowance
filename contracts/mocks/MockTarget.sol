@@ -14,7 +14,7 @@ contract MockTarget {
         emit Pinged(msg.sender, msg.value);
     }
 
-    function fail() external pure {
+    function fail() external payable {
         revert("MockTarget: nope");
     }
 }

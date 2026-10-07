@@ -37,6 +37,9 @@ async function main() {
   const file = path.join(dir, `${network.name}.json`);
   fs.writeFileSync(file, JSON.stringify(out, null, 2) + "\n");
   console.log(`Saved ${file}`);
+  console.log("\nContract addresses (record these):");
+  console.log(`  AgentVault:     https://scan.botchain.ai/address/${out.contracts.AgentVault}`);
+  console.log(`  ProofOfThought: https://scan.botchain.ai/address/${out.contracts.ProofOfThought}`);
 }
 
 main().catch((e) => {

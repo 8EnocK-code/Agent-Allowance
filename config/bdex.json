@@ -1,0 +1,21 @@
+{
+  "note": "Addresses copied from the BOT Chain Project Integration Guide. Verify on https://scan.botchain.ai before use.",
+  "mainnet": {
+    "chainId": 677,
+    "tokens": {
+      "wbot": "0xD5452816194a3784dBa983426cCe7c122F4abd30",
+      "usdt": "0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C"
+    },
+    "v3": {
+      "factory": "0x1C51c173323ec11BB4e3C4fD2314c225Dc4b5419",
+      "swapRouter": "0x07032d47A1b9f8460cBeE9dC17c1d3E438693929",
+      "quoter": "0x1e8bb093ade678ABAa49623D4c3a1a7F37716DEd",
+      "quoterV2": "0x034A705b36067cff99ABf5C662Be881cBd8d0176"
+    },
+    "universalRouter": "0xaE6ae8630f7A888dEc0B9195C85F7515d5887655"
+  },
+  "testnet": {
+    "chainId": 968,
+    "universalRouter": "0x73Be0A1d8011B335A7aBeF6c45544E8ca4448AB5"
+  }
+}

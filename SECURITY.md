@@ -5,7 +5,8 @@
 ## Design properties
 - Owner funds are tracked per owner; an agent can only spend from the owner that authorised it.
 - Effects (budget and balance updates) happen before external calls; state-changing entry points use `ReentrancyGuard`.
-- The vault never grants ERC-20 approvals, so a called target can receive only the native value the agent was budgeted.
+- `callTarget` never grants ERC-20 approvals, so a called target can receive only the native value the agent was budgeted. `swapExactIn` approves the router for exactly `amountIn` during the call and resets it to zero afterwards.
+- Swap proceeds are credited to the owner's vault balance; the agent never receives tokens. Output tokens and routers must both be allowlisted by the owner.
 - Owners can always withdraw, even after revoking an agent.
 - Plain transfers to the vault revert, so funds are never unattributed.
 - Deposits credit the amount actually received (safe with fee-on-transfer tokens).
@@ -17,8 +18,13 @@
 - Native recipients that need more than the forwarded gas are not specially handled.
 - `evmVersion` is set to `paris` because BOT Chain's supported EVM version is not documented in the integration guide.
 
+- `swapExactIn` requires `minAmountOut > 0` but the agent picks the value, so a careless or compromised agent can accept a bad price (sandwich risk). Keep per-tx limits small and only allowlist liquid output tokens.
+- Swaps charge the full `amountIn` against the daily budget even on a partial fill (the unused input is refunded to the balance, not the budget).
+- Only ERC-20 swaps are supported. Native BOT must be wrapped to WBOT first.
+- The swap targets the Uniswap-V3 `SwapRouter` ABI; confirm BDEX matches before mainnet use.
+
 ## Pre-mainnet checklist
-- [ ] `npm test` passes
+- [x] `npm test` passes (36 tests, mocks only)
 - [ ] Run Slither (`slither .`) and resolve findings
 - [ ] Add fuzz/invariant tests (balances never negative, spend never exceeds limits)
 - [ ] Deploy to testnet and exercise every function
