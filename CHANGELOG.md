@@ -1,6 +1,13 @@
 # Changelog
 
-## v0.1.0 (pre-release)
+## v0.1.1 (polish)
+
+Frontend + docs polish. No contract changes (no re-audit surface).
+
+- Frontend: full custom-error map, `Switch` / `Disconnect`, account + network listeners, `localStorage` address persistence, amount + policy validation (per-tx ≤ daily, future expiry), explorer links, copy buttons, live hash preview, receipt count, footer links, meta + favicon, missing `.mono` / verdict styles.
+- ABIs: include agent entry points (`pay`, `callTarget`, `swapExactIn`, `commit`) and events for reuse.
+- Docs: BOT Chain reference table (RPC, faucet, DEX, bridge, wallet, WBOT/USDT, Universal Routers, bundlers), manual network setup, expanded troubleshooting + FAQ, complete SDK API.
+- `frontend/.env.example`: documents UI paste fallback.
 
 First public pre-release. **Unaudited. Not yet exercised against a live BOT Chain deployment.**
 

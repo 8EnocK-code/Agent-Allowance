@@ -1,21 +1,27 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrowserProvider, Contract, ZeroAddress, formatUnits, getAddress, id as keccakText, isAddress, parseUnits } from "ethers";
 import { ERC20_ABI, POT_ABI, VAULT_ABI } from "./abi.js";
-import { BOT_CHAIN, ensureBotChain, niceError } from "./chain.js";
+import { BOT_CHAIN, EXPLORER, addressUrl, ensureBotChain, niceError } from "./chain.js";
 
 const short = (a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "");
 const when = (t) => (!t || t === 0n ? "never" : new Date(Number(t) * 1000).toLocaleString());
+const LS_VAULT = "botguard.vault";
+const LS_POT = "botguard.pot";
 
 export default function App() {
   const [wallet, setWallet] = useState(null); // { signer, address, chainId }
-  const [vaultAddr, setVaultAddr] = useState(import.meta.env.VITE_VAULT_ADDRESS || "");
-  const [potAddr, setPotAddr] = useState(import.meta.env.VITE_POT_ADDRESS || "");
+  const [vaultAddr, setVaultAddr] = useState(() => localStorage.getItem(LS_VAULT) || import.meta.env.VITE_VAULT_ADDRESS || "");
+  const [potAddr, setPotAddr] = useState(() => localStorage.getItem(LS_POT) || import.meta.env.VITE_POT_ADDRESS || "");
   const [tab, setTab] = useState("vault");
   const [status, setStatus] = useState({ kind: "idle", msg: "" });
+  const busy = status.kind === "busy";
 
-  const connect = async () => {
+  useEffect(() => { localStorage.setItem(LS_VAULT, vaultAddr); }, [vaultAddr]);
+  useEffect(() => { localStorage.setItem(LS_POT, potAddr); }, [potAddr]);
+
+  const connect = useCallback(async () => {
     try {
-      if (!window.ethereum) throw new Error("No wallet found. Install MetaMask or another EVM wallet.");
+      if (!window.ethereum) throw new Error("No wallet found. Install MetaMask, OKX, Bitget, or TokenPocket.");
       await window.ethereum.request({ method: "eth_requestAccounts" });
       await ensureBotChain(window.ethereum);
       const provider = new BrowserProvider(window.ethereum);
@@ -26,7 +32,34 @@ export default function App() {
     } catch (e) {
       setStatus({ kind: "err", msg: niceError(e) });
     }
-  };
+  }, []);
+
+  const switchNetwork = useCallback(async () => {
+    try {
+      await ensureBotChain(window.ethereum);
+      const provider = new BrowserProvider(window.ethereum);
+      const net = await provider.getNetwork();
+      setWallet((w) => (w ? { ...w, chainId: Number(net.chainId) } : w));
+    } catch (e) {
+      setStatus({ kind: "err", msg: niceError(e) });
+    }
+  }, []);
+
+  // Keep the header in sync when the user changes account or network in the wallet.
+  useEffect(() => {
+    if (!window.ethereum?.on) return;
+    const onAccounts = (accs) => {
+      if (!accs?.length) setWallet(null);
+      else setWallet((w) => (w ? { ...w, address: accs[0] } : w));
+    };
+    const onChain = (hex) => setWallet((w) => (w ? { ...w, chainId: Number(hex) } : w));
+    window.ethereum.on("accountsChanged", onAccounts);
+    window.ethereum.on("chainChanged", onChain);
+    return () => {
+      window.ethereum.removeListener?.("accountsChanged", onAccounts);
+      window.ethereum.removeListener?.("chainChanged", onChain);
+    };
+  }, []);
 
   // Run a transaction with status feedback.
   const run = useCallback(async (label, fn) => {
@@ -63,8 +96,12 @@ export default function App() {
           <p className="tag">Hard budgets for AI agents. You hold the keys.</p>
         </div>
         {wallet ? (
-          <div className={"pill " + (wrongChain ? "bad" : "good")}>
-            {wrongChain ? `Wrong network (${wallet.chainId})` : `BOT Chain · ${short(wallet.address)}`}
+          <div className="addr-row">
+            <div className={"pill " + (wrongChain ? "bad" : "good")} title={wallet.address}>
+              {wrongChain ? `Wrong network (${wallet.chainId})` : `BOT Chain · ${short(wallet.address)}`}
+            </div>
+            {wrongChain && <button className="ghost" onClick={switchNetwork}>Switch</button>}
+            <button className="ghost" onClick={() => setWallet(null)}>Disconnect</button>
           </div>
         ) : (
           <button onClick={connect}>Connect wallet</button>
@@ -72,52 +109,120 @@ export default function App() {
       </header>
 
       <section className="card cfg">
-        <Field label="AgentVault address" value={vaultAddr} onChange={setVaultAddr} />
-        <Field label="ProofOfThought address" value={potAddr} onChange={setPotAddr} />
+        <Field
+          label="AgentVault address"
+          value={vaultAddr}
+          onChange={setVaultAddr}
+          placeholder="0x… (from deployments/botMainnet.json)"
+          hint={isAddress(vaultAddr) ? null : "Paste a deployed AgentVault address, or deploy first with npm run deploy:mainnet."}
+        />
+        {isAddress(vaultAddr) && <ExplorerLink addr={vaultAddr} />}
+        <Field
+          label="ProofOfThought address"
+          value={potAddr}
+          onChange={setPotAddr}
+          placeholder="0x… (from deployments/botMainnet.json)"
+          hint={isAddress(potAddr) ? null : "Paste a deployed ProofOfThought address."}
+        />
+        {isAddress(potAddr) && <ExplorerLink addr={potAddr} />}
       </section>
 
       <nav>
         {[["vault", "Vault"], ["agents", "Agents"], ["receipts", "Receipts"]].map(([k, l]) => (
-          <button key={k} className={tab === k ? "tab on" : "tab"} onClick={() => setTab(k)}>{l}</button>
+          <button key={k} className={tab === k ? "tab on" : "tab"} onClick={() => setTab(k)} disabled={busy}>{l}</button>
         ))}
       </nav>
 
-      {status.msg && <div className={"status " + status.kind}>{status.msg}</div>}
+      {status.msg && <div className={"status " + status.kind} role="status">{status.msg}</div>}
 
-      {!wallet || wrongChain ? (
-        <p className="muted">Connect a wallet on BOT Chain (chain ID 677) to continue.</p>
+      {!wallet ? (
+        <p className="muted">Connect a wallet to continue. BotGuard runs on BOT Chain (chain ID 677).</p>
+      ) : wrongChain ? (
+        <p className="muted">
+          You are on chain {wallet.chainId}. <button className="ghost" onClick={switchNetwork}>Switch to BOT Chain (677)</button> to continue.
+        </p>
       ) : tab === "receipts" ? (
         <Receipts pot={pot} />
       ) : !vault ? (
-        <p className="muted">Enter a valid AgentVault address above.</p>
+        <p className="muted">Enter a valid AgentVault address above to manage deposits and agents.</p>
       ) : tab === "vault" ? (
-        <VaultTab vault={vault} wallet={wallet} vaultAddr={vaultAddr} run={run} />
+        <VaultTab vault={vault} wallet={wallet} vaultAddr={vaultAddr} run={run} busy={busy} />
       ) : (
-        <AgentsTab vault={vault} wallet={wallet} run={run} />
+        <AgentsTab vault={vault} wallet={wallet} run={run} busy={busy} />
       )}
+
+      <footer>
+        <span>BotGuard · unaudited pre-release — use only what you can afford to lose.</span>
+        <a href="https://www.botchain.ai" target="_blank" rel="noreferrer">Website</a>
+        <a href={EXPLORER} target="_blank" rel="noreferrer">Explorer</a>
+        <a href="https://faucet.botchain.ai" target="_blank" rel="noreferrer">Faucet</a>
+        <a href="https://dex.botchain.ai/#/swap" target="_blank" rel="noreferrer">DEX</a>
+        <a href="https://dev-docs.botchain.ai/docs/Developers/quick-guide/" target="_blank" rel="noreferrer">Docs</a>
+      </footer>
     </div>
   );
 }
 
-function Field({ label, value, onChange, placeholder, type = "text" }) {
+function Field({ label, value, onChange, placeholder, type = "text", hint }) {
   return (
     <label className="field">
       <span>{label}</span>
       <input type={type} value={value} placeholder={placeholder} spellCheck={false} onChange={(e) => onChange(e.target.value)} />
+      {hint && <span className="hint">{hint}</span>}
     </label>
+  );
+}
+
+function ExplorerLink({ addr, label = "View on scan.botchain.ai" }) {
+  return (
+    <div className="row">
+      <span className="mono muted">{short(addr)}</span>
+      <a className="explorer" href={addressUrl(addr)} target="_blank" rel="noreferrer">{label} ↗</a>
+    </div>
+  );
+}
+
+function CopyButton({ text }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      className="ghost copy-btn"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setDone(true);
+          setTimeout(() => setDone(false), 1200);
+        } catch { /* clipboard unavailable */ }
+      }}
+    >
+      {done ? "Copied" : "Copy"}
+    </button>
   );
 }
 
 // Resolve a token input ("" = native BOT) into { address, decimals, symbol }.
 async function tokenInfo(signer, input) {
-  if (!input.trim()) return { address: ZeroAddress, decimals: 18, symbol: "BOT" };
-  if (!isAddress(input)) throw new Error("Token address is not valid.");
-  const c = new Contract(input, ERC20_ABI, signer);
+  const trimmed = (input || "").trim();
+  if (!trimmed) return { address: ZeroAddress, decimals: 18, symbol: "BOT" };
+  if (!isAddress(trimmed)) throw new Error("Token address is not valid.");
+  const c = new Contract(trimmed, ERC20_ABI, signer);
   const [decimals, symbol] = await Promise.all([c.decimals(), c.symbol().catch(() => "TOKEN")]);
-  return { address: getAddress(input), decimals: Number(decimals), symbol, contract: c };
+  return { address: getAddress(trimmed), decimals: Number(decimals), symbol, contract: c };
 }
 
-function VaultTab({ vault, wallet, vaultAddr, run }) {
+function parseAmount(str, decimals) {
+  const s = String(str || "").trim();
+  if (!s) throw new Error("Enter an amount.");
+  try {
+    const v = parseUnits(s, decimals);
+    if (v <= 0n) throw new Error("Amount must be greater than zero.");
+    return v;
+  } catch {
+    throw new Error(`Amount "${s}" is not valid for ${decimals} decimals.`);
+  }
+}
+
+function VaultTab({ vault, wallet, vaultAddr, run, busy }) {
   const [token, setToken] = useState("");
   const [amount, setAmount] = useState("");
   const [bal, setBal] = useState(null);
@@ -136,7 +241,7 @@ function VaultTab({ vault, wallet, vaultAddr, run }) {
   const deposit = async () => {
     const ok = await run("Deposit", async () => {
       const t = await tokenInfo(wallet.signer, token);
-      const amt = parseUnits(amount, t.decimals);
+      const amt = parseAmount(amount, t.decimals);
       if (t.address === ZeroAddress) return vault.depositNative({ value: amt });
       const allowance = await t.contract.allowance(wallet.address, vaultAddr);
       if (allowance < amt) {
@@ -145,15 +250,15 @@ function VaultTab({ vault, wallet, vaultAddr, run }) {
       }
       return vault.depositToken(t.address, amt);
     });
-    if (ok) refresh();
+    if (ok) { setAmount(""); refresh(); }
   };
 
   const withdraw = async () => {
     const ok = await run("Withdraw", async () => {
       const t = await tokenInfo(wallet.signer, token);
-      return vault.withdraw(t.address, parseUnits(amount, t.decimals));
+      return vault.withdraw(t.address, parseAmount(amount, t.decimals));
     });
-    if (ok) refresh();
+    if (ok) { setAmount(""); refresh(); }
   };
 
   return (
@@ -161,20 +266,20 @@ function VaultTab({ vault, wallet, vaultAddr, run }) {
       <h2>Your vault balance</h2>
       <Field label="Token address (leave empty for native BOT)" value={token} onChange={setToken} placeholder="0x… or empty" />
       <div className="row">
-        <button className="ghost" onClick={refresh}>Check balance</button>
+        <button className="ghost" onClick={refresh} disabled={busy}>Check balance</button>
         {bal && <span className="big">{bal}</span>}
       </div>
       <Field label="Amount" value={amount} onChange={setAmount} placeholder="0.0" />
       <div className="row">
-        <button onClick={deposit} disabled={!amount}>Deposit</button>
-        <button className="ghost" onClick={withdraw} disabled={!amount}>Withdraw</button>
+        <button onClick={deposit} disabled={!amount.trim() || busy}>Deposit</button>
+        <button className="ghost" onClick={withdraw} disabled={!amount.trim() || busy}>Withdraw</button>
       </div>
-      <p className="muted">Withdrawals always work, even after you revoke an agent.</p>
+      <p className="muted">Deposits credit what the vault actually receives (safe with fee-on-transfer tokens). Withdrawals always work, even after you revoke an agent. Never send BOT directly to the vault address — use Deposit.</p>
     </section>
   );
 }
 
-function AgentsTab({ vault, wallet, run }) {
+function AgentsTab({ vault, wallet, run, busy }) {
   const [agent, setAgent] = useState("");
   const [token, setToken] = useState("");
   const [daily, setDaily] = useState("");
@@ -206,11 +311,22 @@ function AgentsTab({ vault, wallet, run }) {
     }
   };
 
+  const policyError = (() => {
+    if (!daily.trim() || !perTx.trim()) return null;
+    const d = Number(daily), p = Number(perTx);
+    if (!Number.isFinite(d) || !Number.isFinite(p) || d <= 0 || p <= 0) return "Limits must be numbers greater than zero.";
+    if (p > d) return "Per-transaction limit cannot exceed the daily limit.";
+    if (expiry && new Date(expiry).getTime() <= Date.now()) return "Expiry must be in the future (or empty for never).";
+    return null;
+  })();
+
   const savePolicy = async () => {
+    if (policyError) { alert(policyError); return; }
     const ok = await run("Set policy", async () => {
       const t = await tokenInfo(wallet.signer, token);
       const exp = expiry ? BigInt(Math.floor(new Date(expiry).getTime() / 1000)) : 0n;
-      return vault.setPolicy(agent, t.address, parseUnits(daily, t.decimals), parseUnits(perTx, t.decimals), exp);
+      if (exp !== 0n && exp <= BigInt(Math.floor(Date.now() / 1000))) throw new Error("Expiry must be in the future.");
+      return vault.setPolicy(agent, t.address, parseAmount(daily, t.decimals), parseAmount(perTx, t.decimals), exp);
     });
     if (ok) load();
   };
@@ -220,17 +336,19 @@ function AgentsTab({ vault, wallet, run }) {
     <>
       <section className="card">
         <h2>Agent policy</h2>
-        <Field label="Agent address" value={agent} onChange={setAgent} placeholder="0x…" />
+        <p className="muted">One policy per agent + token. Saving a policy (re-)enables the agent. Token empty = native BOT.</p>
+        <Field label="Agent address (the bot's own key, never yours)" value={agent} onChange={setAgent} placeholder="0x…" />
         <Field label="Token address (empty = native BOT)" value={token} onChange={setToken} placeholder="0x… or empty" />
         <div className="grid2">
-          <Field label="Daily limit" value={daily} onChange={setDaily} placeholder="0.0" />
-          <Field label="Per-transaction limit" value={perTx} onChange={setPerTx} placeholder="0.0" />
+          <Field label="Daily limit (rolling 24h)" value={daily} onChange={setDaily} placeholder="e.g. 3.0" />
+          <Field label="Per-transaction limit" value={perTx} onChange={setPerTx} placeholder="e.g. 1.0" />
         </div>
-        <Field label="Expires (optional)" type="datetime-local" value={expiry} onChange={setExpiry} />
+        {policyError && <p className="hint">{policyError}</p>}
+        <Field label="Expires (optional, empty = never)" type="datetime-local" value={expiry} onChange={setExpiry} />
         <div className="row">
-          <button onClick={savePolicy} disabled={!need || !daily || !perTx}>Save policy</button>
-          <button className="ghost" onClick={load} disabled={!need}>Load current</button>
-          <button className="danger" onClick={() => run("Revoke agent", () => vault.revokeAgent(agent))} disabled={!need}>Revoke agent</button>
+          <button onClick={savePolicy} disabled={!need || !daily.trim() || !perTx.trim() || !!policyError || busy}>Save policy</button>
+          <button className="ghost" onClick={load} disabled={!need || busy}>Load current</button>
+          <button className="danger" onClick={() => run("Revoke agent", () => vault.revokeAgent(agent))} disabled={!need || busy}>Revoke agent</button>
         </div>
         {info && (
           <dl className="kv">
@@ -246,15 +364,16 @@ function AgentsTab({ vault, wallet, run }) {
 
       <section className="card">
         <h2>Allowlists</h2>
+        <p className="muted">Agents can only pay or call addresses you allow. The BDEX router goes here too; swap outputs are allowlisted separately.</p>
         <Field label="Destination (recipient or BDEX router)" value={dest} onChange={setDest} placeholder="0x…" />
         <div className="row">
-          <button onClick={() => run("Allow destination", () => vault.setDestination(agent, dest, true))} disabled={!need || !isAddress(dest)}>Allow</button>
-          <button className="ghost" onClick={() => run("Remove destination", () => vault.setDestination(agent, dest, false))} disabled={!need || !isAddress(dest)}>Remove</button>
+          <button onClick={() => run("Allow destination", () => vault.setDestination(agent, dest, true))} disabled={!need || !isAddress(dest) || busy}>Allow</button>
+          <button className="ghost" onClick={() => run("Remove destination", () => vault.setDestination(agent, dest, false))} disabled={!need || !isAddress(dest) || busy}>Remove</button>
         </div>
-        <Field label="Swap output token" value={outTok} onChange={setOutTok} placeholder="0x…" />
+        <Field label="Swap output token" value={outTok} onChange={setOutTok} placeholder="0x… (e.g. USDT)" />
         <div className="row">
-          <button onClick={() => run("Allow output token", () => vault.setOutputToken(agent, outTok, true))} disabled={!need || !isAddress(outTok)}>Allow</button>
-          <button className="ghost" onClick={() => run("Remove output token", () => vault.setOutputToken(agent, outTok, false))} disabled={!need || !isAddress(outTok)}>Remove</button>
+          <button onClick={() => run("Allow output token", () => vault.setOutputToken(agent, outTok, true))} disabled={!need || !isAddress(outTok) || busy}>Allow</button>
+          <button className="ghost" onClick={() => run("Remove output token", () => vault.setOutputToken(agent, outTok, false))} disabled={!need || !isAddress(outTok) || busy}>Remove</button>
         </div>
       </section>
     </>
@@ -268,6 +387,13 @@ function Receipts({ pot }) {
   const [rid, setRid] = useState("");
   const [rec, setRec] = useState(null);
   const [err, setErr] = useState("");
+  const [count, setCount] = useState(null);
+
+  useEffect(() => {
+    let live = true;
+    if (pot) pot.receiptCount().then((c) => live && setCount(c.toString())).catch(() => {});
+    return () => { live = false; };
+  }, [pot]);
 
   const hashes = { p: text.prompt ? keccakText(text.prompt) : "", o: text.output ? keccakText(text.output) : "" };
 
@@ -286,34 +412,42 @@ function Receipts({ pot }) {
     } catch (e) { setErr(niceError(e)); }
   };
 
-  if (!pot) return <p className="muted">Enter a valid ProofOfThought address above.</p>;
+  if (!pot) return <p className="muted">Enter a valid ProofOfThought address above to verify receipts.</p>;
   return (
     <>
       <section className="card">
         <h2>Verify an AI answer</h2>
-        <p className="muted">Paste the exact prompt and output. Only keccak256 hashes are compared on-chain.</p>
-        <label className="field"><span>Prompt</span><textarea rows={3} value={text.prompt} onChange={(e) => setText({ ...text, prompt: e.target.value })} /></label>
-        <label className="field"><span>Output</span><textarea rows={3} value={text.output} onChange={(e) => setText({ ...text, output: e.target.value })} /></label>
-        <Field label="Agent address" value={agent} onChange={setAgent} placeholder="0x…" />
-        <button onClick={verify} disabled={!hashes.p || !hashes.o || !isAddress(agent)}>Verify</button>
+        <p className="muted">Paste the exact prompt and output. Only keccak256 hashes are compared on-chain — content never leaves your browser.{count ? ` ${count} receipt(s) committed so far.` : ""}</p>
+        <label className="field"><span>Prompt</span><textarea rows={3} value={text.prompt} onChange={(e) => setText({ ...text, prompt: e.target.value })} placeholder="Exact prompt text…" /></label>
+        <label className="field"><span>Output</span><textarea rows={3} value={text.output} onChange={(e) => setText({ ...text, output: e.target.value })} placeholder="Exact model output…" /></label>
+        {(hashes.p || hashes.o) && (
+          <dl className="kv">
+            <dt>Prompt hash</dt><dd className="addr-row"><span className="mono">{short(hashes.p)}{hashes.p}</span><CopyButton text={hashes.p} /></dd>
+            <dt>Output hash</dt><dd className="addr-row"><span className="mono">{short(hashes.o)}{hashes.o}</span><CopyButton text={hashes.o} /></dd>
+          </dl>
+        )}
+        <Field label="Agent address" value={agent} onChange={setAgent} placeholder="0x… (who committed it)" />
+        <div className="row">
+          <button onClick={verify} disabled={!hashes.p || !hashes.o || !isAddress(agent)}>Verify</button>
+        </div>
         {res && (
-          <p className={"verdict " + (res.found ? "good" : "bad")}>
-            {res.found ? `Committed as receipt #${res.id} on ${when(res.ts)}` : "No matching receipt for this agent."}
+          <p className={"verdict " + (res.found ? "good" : "bad")} role="status">
+            {res.found ? `✓ Committed as receipt #${res.id} on ${when(res.ts)}` : "✘ No matching receipt for this agent. Any single character difference fails."}
           </p>
         )}
       </section>
 
       <section className="card">
         <h2>Look up receipt by ID</h2>
-        <Field label="Receipt ID" value={rid} onChange={setRid} placeholder="1" />
-        <button className="ghost" onClick={fetchReceipt} disabled={!/^\d+$/.test(rid)}>Fetch</button>
+        <Field label="Receipt ID" value={rid} onChange={setRid} placeholder={count ? `1 … ${count}` : "1"} />
+        <button className="ghost" onClick={fetchReceipt} disabled={!/^\d+$/.test(rid.trim()) || rid.trim() === "0"}>Fetch</button>
         {rec && (
           <dl className="kv">
-            <dt>Agent</dt><dd>{rec.agent}</dd>
-            <dt>Model</dt><dd>{rec.model}</dd>
+            <dt>Agent</dt><dd className="addr-row"><span className="mono">{rec.agent}</span><a className="explorer" href={addressUrl(rec.agent)} target="_blank" rel="noreferrer">↗</a></dd>
+            <dt>Model</dt><dd>{rec.model || "(none)"}</dd>
             <dt>Time</dt><dd>{when(rec.ts)}</dd>
-            <dt>Prompt hash</dt><dd className="mono">{rec.p}</dd>
-            <dt>Output hash</dt><dd className="mono">{rec.o}</dd>
+            <dt>Prompt hash</dt><dd className="addr-row"><span className="mono">{rec.p}</span><CopyButton text={rec.p} /></dd>
+            <dt>Output hash</dt><dd className="addr-row"><span className="mono">{rec.o}</span><CopyButton text={rec.o} /></dd>
           </dl>
         )}
         {err && <div className="status err">{err}</div>}

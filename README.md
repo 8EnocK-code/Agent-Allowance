@@ -2,8 +2,8 @@
 
 A safe wallet layer for AI agents on **BOT Chain** (EVM, chain ID 677).
 
-- **AgentVault**: you deposit BOT or ERC-20s and give an agent a hard budget (per-transaction cap, rolling 24h limit, destination allowlist, optional expiry). The agent never holds your keys. Revoke instantly, withdraw any time.
-- **ProofOfThought**: agents commit hashes of their prompt and output on-chain, so anyone can later verify an AI answer existed, unaltered, at a given time. Only hashes are stored.
+- **AgentVault**: deposit BOT or ERC-20s, give an agent a hard budget (per-transaction cap, rolling 24h limit, destination allowlist, optional expiry). The agent never holds your keys. Revoke instantly, withdraw any time.
+- **ProofOfThought**: agents commit hashes of prompt + output on-chain, so anyone can later verify an AI answer existed, unaltered, at a given time. Only hashes are stored.
 
 ## Status
 
@@ -16,7 +16,7 @@ A safe wallet layer for AI agents on **BOT Chain** (EVM, chain ID 677).
 | 4 | BDEX swap integration (`swapExactIn`) | done, router ABI unconfirmed on chain |
 | 5 | Front end (owner console) | done, builds clean, not yet exercised against a live deployment |
 | 6 | Agent SDK + demo | done (SDK tested; swap path covered by contract tests, not the SDK suite) |
-| 7 | Docs and release | done (v0.1.0 pre-release) |
+| 7 | Docs and release | done (v0.1.1 polished) |
 | 8 | ERC-4337 session keys | optional |
 
 **Test status:** 45 tests pass (36 contract, 9 SDK; solc 0.8.24, `paris` target). Tests use mock tokens and a mock router, so nothing has run against BOT Chain yet. If Hardhat can't download its compiler, run with `USE_SOLCJS=1`.
@@ -40,7 +40,7 @@ npm test
 fund, set rules, agent commits a receipt, allowed and blocked payments, revoke, withdraw.
 If Hardhat can't download its compiler (offline/restricted network), prefix any command with `USE_SOLCJS=1`.
 
-## Front end
+## Front end (owner console)
 
 ```bash
 cd frontend
@@ -49,17 +49,23 @@ cp .env.example .env.local   # VITE_VAULT_ADDRESS, VITE_POT_ADDRESS from deploym
 npm run dev
 ```
 
-Vite + React + ethers v6. Connects a wallet, switches to BOT Chain (677), and covers deposit/withdraw, agent policy and allowlists, revoke, and Proof-of-Thought verification. Addresses can also be pasted into the page.
+Vite + React + ethers v6. Connects a wallet, switches to BOT Chain (677), and covers:
+
+- **Vault**: check balance, deposit, withdraw (with amount validation and explorer links)
+- **Agents**: set or load a policy (with per-tx ≤ daily and expiry checks), manage allowlists, revoke
+- **Receipts**: live hash preview, verify prompt/output pairs, look up receipts by ID with copy buttons
+
+Addresses persist in `localStorage`, wallet account/network changes are tracked, and every contract error maps to a human-readable message. To host it: import the repo in Vercel, set **Root Directory** to `frontend`, add the two env vars, deploy.
 
 ## Deploy
 
 ```bash
 npm run deploy:testnet   # needs TESTNET_RPC_URL in .env (guide gives chain ID 968 but no RPC)
 npm run deploy:mainnet   # https://rpc.botchain.ai, chain ID 677
-npm run verify:mainnet
+npm run verify:mainnet   # Etherscan-compatible API if available, else verify manually on scan.botchain.ai
 ```
 
-Addresses are written to `deployments/<network>.json`.
+Addresses are written to `deployments/<network>.json`. Paste them into the frontend config (or `frontend/.env.local`).
 
 ## How an agent uses it
 
@@ -81,10 +87,20 @@ Token address `0x0` means native BOT.
 | Mainnet RPC | https://rpc.botchain.ai |
 | Chain ID | 677 (testnet 968) |
 | Explorer | https://scan.botchain.ai |
-| Faucet | https://faucet.botchain.ai |
-| WBOT | 0xD5452816194a3784dBa983426cCe7c122F4abd30 |
-| USDT | 0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C |
-| BDEX Universal Router | 0xaE6ae8630f7A888dEc0B9195C85F7515d5887655 |
+| Faucet (test BOT) | https://faucet.botchain.ai |
+| Website | https://www.botchain.ai |
+| Wallet | https://wallet.botchain.ai |
+| DEX | https://dex.botchain.ai/#/swap |
+| Bridge | https://bridge.botchain.ai |
+| Developer docs | https://dev-docs.botchain.ai/docs/Developers/quick-guide/ |
+| WBOT | `0xD5452816194a3784dBa983426cCe7c122F4abd30` |
+| USDT | `0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C` |
+| BDEX Universal Router (mainnet) | `0xaE6ae8630f7A888dEc0B9195C85F7515d5887655` |
+| BDEX Universal Router (testnet) | `0x73Be0A1d8011B335A7aBeF6c45544E8ca4448AB5` |
+| ERC-4337 bundler (mainnet) | https://bundler.botchain.ai/rpc |
+| ERC-4337 bundler (testnet) | https://bundler.bohr.life/rpc |
+
+Manual wallet entry: Network `BOT Chain`, RPC `https://rpc.botchain.ai`, Chain ID `677`, Symbol `BOT`, Explorer `https://scan.botchain.ai`. Or add via https://chainlist.org/?search=bot+chain&testnets=true.
 
 ## License
 
