@@ -14,7 +14,7 @@ A safe wallet layer for AI agents on **BOT Chain** (EVM, chain ID 677).
 | 2 | Tests, security notes | done |
 | 3 | Deploy and verify scripts | done |
 | 4 | BDEX swap integration (`swapExactIn`) | done, router ABI unconfirmed on chain |
-| 5 | Front end | planned |
+| 5 | Front end (owner console) | done, builds clean, not yet exercised against a live deployment |
 | 6 | Agent SDK and demo | planned |
 | 7 | Docs and release | planned |
 | 8 | ERC-4337 session keys | optional |
@@ -31,6 +31,17 @@ cp .env.example .env     # fill in PRIVATE_KEY (use a dedicated deployer key)
 npm run compile
 npm test
 ```
+
+## Front end
+
+```bash
+cd frontend
+npm install
+cp .env.example .env.local   # VITE_VAULT_ADDRESS, VITE_POT_ADDRESS from deployments/<network>.json
+npm run dev
+```
+
+Vite + React + ethers v6. Connects a wallet, switches to BOT Chain (677), and covers deposit/withdraw, agent policy and allowlists, revoke, and Proof-of-Thought verification. Addresses can also be pasted into the page.
 
 ## Deploy
 
