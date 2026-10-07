@@ -1,8 +1,7 @@
 // Testnet-first: the app targets BOT Chain testnet (968) until mainnet launch.
-// The testnet RPC is not published in the integration guide, so it comes from
-// VITE_TESTNET_RPC_URL (see frontend/.env.example). Wallet switching works
-// without it; only auto-adding the network needs it.
-export const TESTNET_RPC_URL = import.meta.env.VITE_TESTNET_RPC_URL || "";
+// Default RPC/Explorer from the BOT Chain quick guide; override the RPC with
+// VITE_TESTNET_RPC_URL if needed (see frontend/.env.example).
+export const TESTNET_RPC_URL = import.meta.env.VITE_TESTNET_RPC_URL || "https://rpc.bohr.life";
 
 export const BOT_CHAIN = {
   chainId: 968,
@@ -11,7 +10,7 @@ export const BOT_CHAIN = {
     chainId: "0x3c8",
     chainName: "BOT Chain Testnet",
     rpcUrls: TESTNET_RPC_URL ? [TESTNET_RPC_URL] : [],
-    blockExplorerUrls: ["https://scan.botchain.ai"],
+    blockExplorerUrls: ["https://scan.bohr.life"],
     nativeCurrency: { name: "BOT", symbol: "BOT", decimals: 18 },
   },
 };
@@ -29,7 +28,7 @@ export const BOT_MAINNET = {
   },
 };
 
-export const EXPLORER = "https://scan.botchain.ai";
+export const EXPLORER = "https://scan.bohr.life";
 export const addressUrl = (a) => `${EXPLORER}/address/${a}`;
 export const txUrl = (h) => `${EXPLORER}/tx/${h}`;
 

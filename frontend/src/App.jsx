@@ -190,7 +190,7 @@ export default function App() {
           <span>BotGuard · testnet pre-release, use test BOT only.</span>
           <a href="https://www.botchain.ai" target="_blank" rel="noreferrer">Website</a>
           <a href={EXPLORER} target="_blank" rel="noreferrer">Explorer</a>
-          <a href="https://faucet.botchain.ai" target="_blank" rel="noreferrer">Faucet</a>
+          <a href="https://faucet.botchain.ai/basic" target="_blank" rel="noreferrer">Faucet</a>
           <a href="https://dex.botchain.ai/#/swap" target="_blank" rel="noreferrer">DEX</a>
           <a href="https://dev-docs.botchain.ai/docs/Developers/quick-guide/" target="_blank" rel="noreferrer">Docs</a>
         </footer>

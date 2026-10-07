@@ -60,7 +60,7 @@ Addresses persist in `localStorage`, wallet account/network changes are tracked,
 ## Deploy (testnet first)
 
 ```bash
-npm run deploy            # testnet (needs TESTNET_RPC_URL in .env, chain ID 968)
+npm run deploy            # testnet (RPC defaults to https://rpc.bohr.life, chain ID 968)
 npm run deploy:testnet     # same as above
 npm run verify            # verify on the testnet explorer, if supported
 ```
@@ -86,10 +86,11 @@ Token address `0x0` means native BOT.
 
 | | |
 |---|---|
-| Testnet RPC | Set `TESTNET_RPC_URL` in `.env` (not published in the guide yet) |
+| Testnet RPC | https://rpc.bohr.life (override with `TESTNET_RPC_URL`) |
+| Testnet explorer | https://scan.bohr.life |
+| Testnet faucet | https://faucet.botchain.ai/basic |
 | Mainnet RPC (parked) | https://rpc.botchain.ai |
 | Chain ID | 968 testnet (677 mainnet, parked) |
-| Testnet RPC | Set `TESTNET_RPC_URL` in `.env` (not published in the guide yet) |
 | Explorer | https://scan.botchain.ai |
 | Faucet (test BOT) | https://faucet.botchain.ai |
 | Website | https://www.botchain.ai |
@@ -104,7 +105,7 @@ Token address `0x0` means native BOT.
 | ERC-4337 bundler (mainnet) | https://bundler.botchain.ai/rpc |
 | ERC-4337 bundler (testnet) | https://bundler.bohr.life/rpc |
 
-Manual wallet entry (testnet): Name `BOT Chain Testnet`, RPC from `TESTNET_RPC_URL`, Chain ID `968`, Symbol `BOT`, Explorer `https://scan.botchain.ai`. Mainnet entry (parked): RPC `https://rpc.botchain.ai`, Chain ID `677`. Or add via https://chainlist.org/?search=bot+chain&testnets=true.
+Manual wallet entry (testnet): Name `BOT Chain Testnet`, RPC `https://rpc.bohr.life`, Chain ID `968`, Symbol `BOT`, Explorer `https://scan.bohr.life`. Mainnet entry (parked): RPC `https://rpc.botchain.ai`, Chain ID `677`, Explorer `https://scan.botchain.ai`. Or add via https://chainlist.org/?search=bot+chain&testnets=true.
 
 ## License
 

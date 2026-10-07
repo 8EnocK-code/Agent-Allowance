@@ -44,8 +44,9 @@ async function main() {
   fs.writeFileSync(file, JSON.stringify(out, null, 2) + "\n");
   console.log(`Saved ${file}`);
   console.log("\nContract addresses (record these):");
-  console.log(`  AgentVault:     https://scan.botchain.ai/address/${out.contracts.AgentVault}`);
-  console.log(`  ProofOfThought: https://scan.botchain.ai/address/${out.contracts.ProofOfThought}`);
+  const explorer = network.name === "botTestnet" ? "https://scan.bohr.life" : "https://scan.botchain.ai";
+  console.log(`  AgentVault:     ${explorer}/address/${out.contracts.AgentVault}`);
+  console.log(`  ProofOfThought: ${explorer}/address/${out.contracts.ProofOfThought}`);
 }
 
 main().catch((e) => {

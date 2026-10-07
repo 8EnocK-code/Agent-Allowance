@@ -40,9 +40,9 @@ module.exports = {
       accounts,
     },
     botTestnet: {
-      // Testnet-first: fill TESTNET_RPC_URL in .env (chain ID 968).
-      // The integration guide publishes no testnet RPC, so there is no default.
-      url: process.env.TESTNET_RPC_URL || "",
+      // Testnet-first: default RPC from the BOT Chain quick guide.
+      // Override with TESTNET_RPC_URL in .env if needed.
+      url: process.env.TESTNET_RPC_URL || "https://rpc.bohr.life",
       chainId: 968,
       accounts,
     },

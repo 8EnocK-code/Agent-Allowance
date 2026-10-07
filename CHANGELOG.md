@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.3 (testnet wiring)
+
+- Default testnet RPC `https://rpc.bohr.life` and explorer `https://scan.bohr.life` from the BOT Chain quick guide (verified live, chain ID 968). Env vars now only override.
+- Deploy script prints testnet explorer links on `botTestnet`.
+- Faucet links point to `https://faucet.botchain.ai/basic`.
+
 ## v0.1.2 (testnet-first)
 
 Testnet-only. No contract changes.

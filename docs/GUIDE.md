@@ -32,12 +32,12 @@ BOT Chain is EVM-compatible. Any EVM wallet works (MetaMask, OKX, Bitget, TokenP
 | Field | BOT Chain Testnet |
 |---|---|
 | Network name | BOT Chain Testnet |
-| RPC URL | Your testnet endpoint (`TESTNET_RPC_URL`) |
+| RPC URL | https://rpc.bohr.life |
 | Chain ID | 968 |
 | Currency symbol | BOT |
-| Explorer | https://scan.botchain.ai |
+| Explorer | https://scan.bohr.life |
 
-Get test BOT at https://faucet.botchain.ai. Mainnet (chain ID 677, RPC https://rpc.botchain.ai) is parked until testnet validation is complete.
+Get test BOT at https://faucet.botchain.ai/basic. Mainnet (chain ID 677, RPC https://rpc.botchain.ai) is parked until testnet validation is complete.
 
 ## Path 1: try it locally (no wallet, no funds)
 
@@ -51,8 +51,8 @@ If Hardhat cannot download its compiler on your network, prefix with `USE_SOLCJS
 
 ## Path 2: deploy to BOT Chain
 
-1. `cp .env.example .env` and fill in a **dedicated deployer key** (never your main wallet) plus `TESTNET_RPC_URL` (chain ID 968).
-2. Get test BOT from https://faucet.botchain.ai, then `npm run deploy` (testnet).
+1. `cp .env.example .env` and fill in a **dedicated deployer key** (never your main wallet). Testnet RPC defaults to https://rpc.bohr.life (override with `TESTNET_RPC_URL`).
+2. Get test BOT from https://faucet.botchain.ai/basic, then `npm run deploy` (testnet).
 3. Addresses land in `deployments/botTestnet.json`. Verify with `npm run verify` (needs an Etherscan-compatible API; otherwise verify manually on the explorer with `npx hardhat flatten` output).
 4. Exercise every function on testnet (deposit, policy, pay, revoke, withdraw, receipts) before even thinking about mainnet.
 5. Mainnet deploy (`npm run deploy:mainnet`, chain ID 677) stays parked until testnet validation is complete.

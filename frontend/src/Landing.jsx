@@ -85,7 +85,7 @@ export default function Landing({ onLaunch }) {
         <div className="ref-grid">
           <div className="ref"><h3>Network</h3><p>BOT Chain Testnet<br />Chain ID <strong>968</strong> · Symbol <strong>BOT</strong></p></div>
           <div className="ref"><h3>Assets</h3><p><span className="mono">WBOT 0xD545…bd30</span><br /><span className="mono">USDT 0xaBab…87a3C</span></p></div>
-          <div className="ref"><h3>Verify</h3><p><a href={EXPLORER} target="_blank" rel="noreferrer">Block explorer ↗</a><br /><a href="https://faucet.botchain.ai" target="_blank" rel="noreferrer">Testnet faucet ↗</a> · <a href="https://dex.botchain.ai/#/swap" target="_blank" rel="noreferrer">DEX ↗</a></p></div>
+          <div className="ref"><h3>Verify</h3><p><a href={EXPLORER} target="_blank" rel="noreferrer">Block explorer ↗</a><br /><a href="https://faucet.botchain.ai/basic" target="_blank" rel="noreferrer">Testnet faucet ↗</a> · <a href="https://dex.botchain.ai/#/swap" target="_blank" rel="noreferrer">DEX ↗</a></p></div>
         </div>
       </section>
 
