@@ -507,6 +507,13 @@ function AgentsTab({ vault, wallet, run, busy, pending }) {
 }
 
 function Receipts({ pot }) {
+  // Exact preimages of on-chain testnet receipt #1 (verified by hash).
+  // Lets anyone demonstrate verification in one click, no copy-paste drift.
+  const EXAMPLE = {
+    prompt: "BotGuard test: should I pay 0.1 BOT to the owner?",
+    output: "Yes. Amount is within the 0.1 per-transaction policy and the owner is allowlisted.",
+    agent: "0xEbedfb1Db4eCC1f03E2952a43c07C9f56Cc9E05D",
+  };
   const [text, setText] = useState({ prompt: "", output: "" });
   const [agent, setAgent] = useState("");
   const [res, setRes] = useState(null);
@@ -547,6 +554,9 @@ function Receipts({ pot }) {
         <p className="muted">Paste the exact prompt and output. Only keccak256 hashes are compared on-chain, so content never leaves your browser.{count === null ? "" : count === "0" ? " No receipts committed yet." : count === "1" ? " 1 receipt committed so far." : ` ${count} receipts committed so far.`}</p>
         <label className="field"><span>Prompt</span><textarea rows={3} value={text.prompt} onChange={(e) => setText({ ...text, prompt: e.target.value })} placeholder="Exact prompt text…" /></label>
         <label className="field"><span>Output</span><textarea rows={3} value={text.output} onChange={(e) => setText({ ...text, output: e.target.value })} placeholder="Exact model output…" /></label>
+        <div className="row">
+          <button className="ghost" onClick={() => { setText({ prompt: EXAMPLE.prompt, output: EXAMPLE.output }); setAgent(EXAMPLE.agent); setRes(null); setErr(""); }}>Fill receipt #1 test values</button>
+        </div>
         {(hashes.p || hashes.o) && (
           <dl className="kv">
             <dt>Prompt hash</dt><dd className="addr-row"><span className="mono">{hashes.p}</span><CopyButton text={hashes.p} /></dd>
