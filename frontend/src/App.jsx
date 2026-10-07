@@ -256,6 +256,23 @@ function TxHistory({ txs }) {
   );
 }
 
+// Reads go through the user's wallet RPC, which can hang forever on a dead
+// endpoint. Race every read against a timer so the UI always answers.
+async function withTimeout(promise, ms, message) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), ms); }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const READ_TIMEOUT_MS = 25000;
+const RPC_TIMEOUT_MSG = "Request timed out. Your wallet's RPC endpoint for BOT Testnet (968) did not answer. Check the RPC URL in your wallet's network settings (it should be https://rpc.bohr.life), then try again.";
+
 function CopyButton({ text }) {
   const [done, setDone] = useState(false);
   return (
@@ -300,16 +317,20 @@ function VaultTab({ vault, wallet, vaultAddr, run, busy, pending }) {
   const [amount, setAmount] = useState("");
   const [bal, setBal] = useState(null);
   const [err, setErr] = useState("");
+  const [checking, setChecking] = useState(false);
 
   const refresh = async () => {
     setErr("");
+    setChecking(true);
     try {
-      const t = await tokenInfo(wallet.signer, token);
-      const b = await vault.balances(wallet.address, t.address);
+      const t = await withTimeout(tokenInfo(wallet.signer, token), READ_TIMEOUT_MS, RPC_TIMEOUT_MSG);
+      const b = await withTimeout(vault.balances(wallet.address, t.address), READ_TIMEOUT_MS, RPC_TIMEOUT_MSG);
       setBal(`${formatUnits(b, t.decimals)} ${t.symbol}`);
     } catch (e) {
       setBal(null);
       setErr(niceError(e));
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -342,7 +363,7 @@ function VaultTab({ vault, wallet, vaultAddr, run, busy, pending }) {
       <p className="muted">Deposits credit what the vault actually receives. Withdrawals always work, even after revoke.</p>
       <Field label="Token address (leave empty for native BOT)" value={token} onChange={setToken} placeholder="0x… or empty" />
       <div className="row">
-        <button className="ghost" onClick={refresh} disabled={busy}>Check balance</button>
+        <button className="ghost" onClick={refresh} disabled={busy || checking}>{checking ? "Checking…" : "Check balance"}</button>
         {bal && <span className="big">{bal}</span>}
       </div>
       {err && <div className="inline-err">{err}</div>}
@@ -366,17 +387,19 @@ function AgentsTab({ vault, wallet, run, busy, pending }) {
   const [outTok, setOutTok] = useState("");
   const [info, setInfo] = useState(null);
   const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const load = async () => {
     setErr("");
+    setLoading(true);
     try {
       if (!isAddress(agent)) throw new Error("Agent address is not valid.");
-      const t = await tokenInfo(wallet.signer, token);
-      const [enabled, p, remaining] = await Promise.all([
+      const t = await withTimeout(tokenInfo(wallet.signer, token), READ_TIMEOUT_MS, RPC_TIMEOUT_MSG);
+      const [enabled, p, remaining] = await withTimeout(Promise.all([
         vault.agentEnabled(wallet.address, agent),
         vault.policies(wallet.address, agent, t.address),
         vault.remainingBudget(wallet.address, agent, t.address),
-      ]);
+      ]), READ_TIMEOUT_MS, RPC_TIMEOUT_MSG);
       const f = (v) => `${formatUnits(v, t.decimals)} ${t.symbol}`;
       setInfo({
         enabled,
@@ -387,6 +410,8 @@ function AgentsTab({ vault, wallet, run, busy, pending }) {
     } catch (e) {
       setInfo(null);
       setErr(niceError(e));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -427,7 +452,7 @@ function AgentsTab({ vault, wallet, run, busy, pending }) {
         <Field label="Expires (optional, empty = never)" type="datetime-local" value={expiry} onChange={setExpiry} />
         <div className="row">
           <button onClick={savePolicy} disabled={!need || !daily.trim() || !perTx.trim() || !!policyError || busy}>{pending === "Set policy" ? "Saving…" : "Save policy"}</button>
-          <button className="ghost" onClick={load} disabled={!need || busy}>Load current</button>
+          <button className="ghost" onClick={load} disabled={!need || busy || loading}>{loading ? "Loading…" : "Load current"}</button>
           <button className="danger" onClick={() => run("Revoke agent", () => vault.revokeAgent(agent))} disabled={!need || busy}>{pending === "Revoke agent" ? "Revoking…" : "Revoke agent"}</button>
         </div>
         {info && (
@@ -468,6 +493,7 @@ function Receipts({ pot }) {
   const [rec, setRec] = useState(null);
   const [err, setErr] = useState("");
   const [count, setCount] = useState(null);
+  const [working, setWorking] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -478,18 +504,18 @@ function Receipts({ pot }) {
   const hashes = { p: text.prompt ? keccakText(text.prompt) : "", o: text.output ? keccakText(text.output) : "" };
 
   const verify = async () => {
-    setErr(""); setRes(null);
+    setErr(""); setRes(null); setWorking(true);
     try {
-      const [found, id, ts] = await pot.verify(agent, hashes.p, hashes.o);
+      const [found, id, ts] = await withTimeout(pot.verify(agent, hashes.p, hashes.o), READ_TIMEOUT_MS, RPC_TIMEOUT_MSG);
       setRes({ found, id: id.toString(), ts });
-    } catch (e) { setErr(niceError(e)); }
+    } catch (e) { setErr(niceError(e)); } finally { setWorking(false); }
   };
   const fetchReceipt = async () => {
-    setErr(""); setRec(null);
+    setErr(""); setRec(null); setWorking(true);
     try {
-      const r = await pot.getReceipt(BigInt(rid));
+      const r = await withTimeout(pot.getReceipt(BigInt(rid.trim())), READ_TIMEOUT_MS, RPC_TIMEOUT_MSG);
       setRec({ agent: r.agent, ts: r.timestamp, p: r.promptHash, o: r.outputHash, model: r.model });
-    } catch (e) { setErr(niceError(e)); }
+    } catch (e) { setErr(niceError(e)); } finally { setWorking(false); }
   };
 
   if (!pot) return <p className="muted">Enter a valid ProofOfThought address above to verify receipts.</p>;
@@ -508,7 +534,7 @@ function Receipts({ pot }) {
         )}
         <Field label="Agent address" value={agent} onChange={setAgent} placeholder="0x… (who committed it)" />
         <div className="row">
-          <button onClick={verify} disabled={!hashes.p || !hashes.o || !isAddress(agent)}>Verify</button>
+          <button onClick={verify} disabled={!hashes.p || !hashes.o || !isAddress(agent) || working}>{working ? "Verifying…" : "Verify"}</button>
         </div>
         {res && (
           <p className={"verdict " + (res.found ? "good" : "bad")} role="status">
@@ -520,7 +546,7 @@ function Receipts({ pot }) {
       <section className="card">
         <h2>Look up receipt by ID</h2>
         <Field label="Receipt ID" value={rid} onChange={setRid} placeholder={count ? `1 … ${count}` : "1"} />
-        <button className="ghost" onClick={fetchReceipt} disabled={!/^\d+$/.test(rid.trim()) || rid.trim() === "0"}>Fetch</button>
+        <button className="ghost" onClick={fetchReceipt} disabled={!/^\d+$/.test(rid.trim()) || rid.trim() === "0" || working}>{working ? "Fetching…" : "Fetch"}</button>
         {rec && (
           <dl className="kv">
             <dt>Agent</dt><dd className="addr-row"><span className="mono">{rec.agent}</span><a className="explorer" href={addressUrl(rec.agent)} target="_blank" rel="noreferrer">↗</a></dd>
