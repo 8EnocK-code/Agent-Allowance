@@ -16,12 +16,14 @@ A safe wallet layer for AI agents on **BOT Chain** (EVM, chain ID 677).
 | 4 | BDEX swap integration (`swapExactIn`) | done, router ABI unconfirmed on chain |
 | 5 | Front end (owner console) | done, builds clean, not yet exercised against a live deployment |
 | 6 | Agent SDK + demo | done (SDK tested; swap path covered by contract tests, not the SDK suite) |
-| 7 | Docs and release | planned |
+| 7 | Docs and release | done (v0.1.0 pre-release) |
 | 8 | ERC-4337 session keys | optional |
 
-**Test status:** 36 tests pass (compiled with solc 0.8.24, `paris` target). Tests use mock tokens and a mock router, so nothing has run against BOT Chain yet. The Hardhat compiler download was not reachable from the build sandbox, so the suite was run with solc-js; `npm test` should behave the same on a normal machine.
+**Test status:** 45 tests pass (36 contract, 9 SDK; solc 0.8.24, `paris` target). Tests use mock tokens and a mock router, so nothing has run against BOT Chain yet. If Hardhat can't download its compiler, run with `USE_SOLCJS=1`.
 
 **Phase 4 caveat:** `swapExactIn` targets the Uniswap-V3 `SwapRouter` ABI (`exactInputSingle` with `deadline`). BDEX lists a V3 `swapRouter` in the integration guide, but the exact signature is not confirmed. Check it on https://scan.botchain.ai before mainnet use. Addresses are in `config/bdex.json`.
+
+Full walkthrough: [`docs/GUIDE.md`](docs/GUIDE.md) · Security: [`SECURITY.md`](SECURITY.md) · [`CHANGELOG.md`](CHANGELOG.md)
 
 ## Quick start
 

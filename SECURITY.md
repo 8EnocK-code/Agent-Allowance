@@ -23,8 +23,10 @@
 - Only ERC-20 swaps are supported. Native BOT must be wrapped to WBOT first.
 - The swap targets the Uniswap-V3 `SwapRouter` ABI; confirm BDEX matches before mainnet use.
 
+- The SDK's pre-flight checks are a convenience for honest agents, not a trust boundary. The contracts are the only enforcement.
+
 ## Pre-mainnet checklist
-- [x] `npm test` passes (36 tests, mocks only)
+- [x] `npm test` passes (45 tests, mocks only)
 - [ ] Run Slither (`slither .`) and resolve findings
 - [ ] Add fuzz/invariant tests (balances never negative, spend never exceeds limits)
 - [ ] Deploy to testnet and exercise every function
