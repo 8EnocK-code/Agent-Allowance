@@ -1,0 +1,10 @@
+{
+  "network": "botTestnet",
+  "chainId": 968,
+  "deployer": "0x4F1739cE637018d6Dd980f46B0C1166859769fad",
+  "deployedAt": "2026-10-07T15:39:34.266Z",
+  "contracts": {
+    "AgentVault": "0x80690f630bA06967CCb59F551daC5e430DF9a1f6",
+    "ProofOfThought": "0x37a0264d6d15AD93a303ABe84c548CA8D50D4b61"
+  }
+}
