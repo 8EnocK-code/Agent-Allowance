@@ -18,6 +18,11 @@ export const VAULT_ABI = [
   "function allowedDestination(address owner, address agent, address destination) view returns (bool)",
   "function allowedOutputToken(address owner, address agent, address token) view returns (bool)",
   "function remainingBudget(address owner, address agent, address token) view returns (uint256)",
+  "error ZeroAmount()", "error ZeroAddress()", "error InsufficientBalance()",
+  "error AgentNotEnabled()", "error NoPolicy()", "error PolicyExpired()", "error InvalidPolicy()",
+  "error PerTxLimitExceeded()", "error DailyLimitExceeded()", "error DestinationNotAllowed()",
+  "error TransferFailed()", "error DirectTransferNotAllowed()", "error NativeNotSupported()",
+  "error SameToken()", "error OutputTokenNotAllowed()", "error SlippageExceeded()", "error RouterOverspent()",
   "event Deposited(address indexed owner, address indexed token, uint256 amount)",
   "event Withdrawn(address indexed owner, address indexed token, uint256 amount)",
   "event PolicySet(address indexed owner, address indexed agent, address indexed token, uint256 dailyLimit, uint256 perTxLimit, uint64 expiresAt)",
@@ -29,6 +34,7 @@ export const POT_ABI = [
   "function receiptCount() view returns (uint256)",
   "function verify(address agent, bytes32 promptHash, bytes32 outputHash) view returns (bool found, uint256 id, uint64 timestamp)",
   "function getReceipt(uint256 id) view returns (tuple(address agent, uint64 timestamp, bytes32 promptHash, bytes32 outputHash, string model))",
+  "error AlreadyCommitted(uint256 id)", "error EmptyHash()", "error ModelTooLong()", "error UnknownReceipt()",
   "event ReceiptCommitted(uint256 indexed id, address indexed agent, bytes32 indexed outputHash, bytes32 promptHash, string model)",
 ];
 

@@ -1,8 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BrowserProvider, Contract, ZeroAddress, formatUnits, getAddress, id as keccakText, isAddress, parseUnits } from "ethers";
+import { BrowserProvider, Contract, Interface, ZeroAddress, formatUnits, getAddress, id as keccakText, isAddress, parseUnits } from "ethers";
 import { ERC20_ABI, POT_ABI, VAULT_ABI } from "./abi.js";
-import { BOT_CHAIN, EXPLORER, addressUrl, ensureBotChain, niceError, txUrl } from "./chain.js";
+import { BOT_CHAIN, ERR, EXPLORER, addressUrl, ensureBotChain, niceError, txUrl } from "./chain.js";
 import Landing from "./Landing.jsx";
+
+const REVERT_IFACE = new Interface([...VAULT_ABI, ...POT_ABI].filter((f) => f.startsWith("error ")));
+
+// Decode raw revert data (ethers leaves it undecoded) into the friendly copy.
+function decodeRevert(e) {
+  const data = [e?.data, e?.error?.data, e?.info?.error?.data, e?.revert?.data]
+    .find((d) => typeof d === "string" && d.startsWith("0x"));
+  if (data) {
+    try {
+      const name = REVERT_IFACE.parseError(data)?.name;
+      if (name && ERR[name]) return ERR[name];
+      if (name) return name;
+    } catch { /* unknown selector */ }
+  }
+  return niceError(e);
+}
 
 const short = (a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "");
 const when = (t) => (!t || t === 0n ? "never" : new Date(Number(t) * 1000).toLocaleString());
@@ -66,10 +82,11 @@ export default function App() {
 
   const run = useCallback(async (label, fn) => {
     setPending(label);
+    let hash = null;
     try {
       setStatus({ kind: "busy", msg: `${label}: confirm in wallet…` });
       const tx = await fn();
-      let hash = tx?.hash || null;
+      hash = tx?.hash || null;
       if (tx?.wait) {
         if (hash) {
           setTxs((t) => [{ label, hash, state: "pending", time: Date.now() }, ...t].slice(0, 6));
@@ -86,8 +103,9 @@ export default function App() {
       setStatus({ kind: "ok", msg: `${label}: done.` });
       return { ok: true, hash };
     } catch (e) {
-      setStatus({ kind: "err", msg: `${label}: ${niceError(e)}` });
-      return { ok: false, hash: null };
+      if (hash) setTxs((t) => t.map((x) => (x.hash === hash ? { ...x, state: "failed" } : x)));
+      setStatus({ kind: "err", msg: `${label}: ${decodeRevert(e)}` });
+      return { ok: false, hash };
     } finally {
       setPending(null);
     }

@@ -50,7 +50,8 @@ export async function ensureBotChain(eth) {
 
 // Turn contract custom errors into something a human can act on.
 // Covers every custom error in AgentVault.sol and ProofOfThought.sol.
-const ERR = {
+// Exported so callers can map decoded custom-error names to the same copy.
+export const ERR = {
   ZeroAmount: "Amount must be greater than zero.",
   ZeroAddress: "An address field is empty or zero.",
   InsufficientBalance: "Not enough vault balance for this action.",
