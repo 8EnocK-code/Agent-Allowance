@@ -15,7 +15,7 @@ A safe wallet layer for AI agents on **BOT Chain** (EVM, chain ID 677).
 | 3 | Deploy and verify scripts | done |
 | 4 | BDEX swap integration (`swapExactIn`) | done, router ABI unconfirmed on chain |
 | 5 | Front end (owner console) | done, builds clean, not yet exercised against a live deployment |
-| 6 | Agent SDK and demo | planned |
+| 6 | Agent SDK + demo | done (SDK tested; swap path covered by contract tests, not the SDK suite) |
 | 7 | Docs and release | planned |
 | 8 | ERC-4337 session keys | optional |
 
@@ -31,6 +31,12 @@ cp .env.example .env     # fill in PRIVATE_KEY (use a dedicated deployer key)
 npm run compile
 npm test
 ```
+
+## Agent SDK and demo
+
+`sdk/` is the agent-side library (see `sdk/README.md`). `npm run demo` runs a full story on a local chain:
+fund, set rules, agent commits a receipt, allowed and blocked payments, revoke, withdraw.
+If Hardhat can't download its compiler (offline/restricted network), prefix any command with `USE_SOLCJS=1`.
 
 ## Front end
 

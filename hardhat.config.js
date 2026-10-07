@@ -1,6 +1,25 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
+
+// Optional: compile with the bundled solc-js when the native compiler can't be downloaded
+// (offline CI, restricted sandboxes). Usage: USE_SOLCJS=1 npx hardhat test
+if (process.env.USE_SOLCJS) {
+  const { subtask } = require("hardhat/config");
+  const { TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD } = require("hardhat/builtin-tasks/task-names");
+  subtask(TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD, async (args, hre, runSuper) => {
+    if (args.solcVersion === "0.8.24") {
+      return {
+        compilerPath: require.resolve("solc/soljson.js"),
+        isSolcJs: true,
+        version: "0.8.24",
+        longVersion: "0.8.24+commit.e11b9ed9",
+      };
+    }
+    return runSuper();
+  });
+}
+
 const PK = process.env.PRIVATE_KEY;
 const accounts = PK ? [PK] : [];
 
