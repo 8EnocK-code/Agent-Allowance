@@ -1,6 +1,6 @@
 # BotGuard
 
-A safe wallet layer for AI agents on **BOT Chain** (EVM, chain ID 677).
+A safe wallet layer for AI agents on **BOT Chain testnet** (EVM, chain ID 968). Mainnet (677) comes later, after testnet validation.
 
 - **AgentVault**: deposit BOT or ERC-20s, give an agent a hard budget (per-transaction cap, rolling 24h limit, destination allowlist, optional expiry). The agent never holds your keys. Revoke instantly, withdraw any time.
 - **ProofOfThought**: agents commit hashes of prompt + output on-chain, so anyone can later verify an AI answer existed, unaltered, at a given time. Only hashes are stored.
@@ -49,7 +49,7 @@ cp .env.example .env.local   # VITE_VAULT_ADDRESS, VITE_POT_ADDRESS from deploym
 npm run dev
 ```
 
-Vite + React + ethers v6. Connects a wallet, switches to BOT Chain (677), and covers:
+Vite + React + ethers v6. Connects a wallet, switches to BOT Chain Testnet (968), and covers:
 
 - **Vault**: check balance, deposit, withdraw (with amount validation and explorer links)
 - **Agents**: set or load a policy (with per-tx ≤ daily and expiry checks), manage allowlists, revoke
@@ -57,15 +57,17 @@ Vite + React + ethers v6. Connects a wallet, switches to BOT Chain (677), and co
 
 Addresses persist in `localStorage`, wallet account/network changes are tracked, and every contract error maps to a human-readable message. To host it: import the repo in Vercel, set **Root Directory** to `frontend`, add the two env vars, deploy.
 
-## Deploy
+## Deploy (testnet first)
 
 ```bash
-npm run deploy:testnet   # needs TESTNET_RPC_URL in .env (guide gives chain ID 968 but no RPC)
-npm run deploy:mainnet   # https://rpc.botchain.ai, chain ID 677
-npm run verify:mainnet   # Etherscan-compatible API if available, else verify manually on scan.botchain.ai
+npm run deploy            # testnet (needs TESTNET_RPC_URL in .env, chain ID 968)
+npm run deploy:testnet     # same as above
+npm run verify            # verify on the testnet explorer, if supported
 ```
 
-Addresses are written to `deployments/<network>.json`. Paste them into the frontend config (or `frontend/.env.local`).
+Get test BOT from https://faucet.botchain.ai first. Addresses are written to `deployments/botTestnet.json`. Paste them into the frontend config (or `frontend/.env.local`).
+
+Mainnet (`npm run deploy:mainnet`, chain ID 677) is parked until testnet validation is complete.
 
 ## How an agent uses it
 
@@ -84,8 +86,10 @@ Token address `0x0` means native BOT.
 
 | | |
 |---|---|
-| Mainnet RPC | https://rpc.botchain.ai |
-| Chain ID | 677 (testnet 968) |
+| Testnet RPC | Set `TESTNET_RPC_URL` in `.env` (not published in the guide yet) |
+| Mainnet RPC (parked) | https://rpc.botchain.ai |
+| Chain ID | 968 testnet (677 mainnet, parked) |
+| Testnet RPC | Set `TESTNET_RPC_URL` in `.env` (not published in the guide yet) |
 | Explorer | https://scan.botchain.ai |
 | Faucet (test BOT) | https://faucet.botchain.ai |
 | Website | https://www.botchain.ai |
@@ -100,7 +104,7 @@ Token address `0x0` means native BOT.
 | ERC-4337 bundler (mainnet) | https://bundler.botchain.ai/rpc |
 | ERC-4337 bundler (testnet) | https://bundler.bohr.life/rpc |
 
-Manual wallet entry: Network `BOT Chain`, RPC `https://rpc.botchain.ai`, Chain ID `677`, Symbol `BOT`, Explorer `https://scan.botchain.ai`. Or add via https://chainlist.org/?search=bot+chain&testnets=true.
+Manual wallet entry (testnet): Name `BOT Chain Testnet`, RPC from `TESTNET_RPC_URL`, Chain ID `968`, Symbol `BOT`, Explorer `https://scan.botchain.ai`. Mainnet entry (parked): RPC `https://rpc.botchain.ai`, Chain ID `677`. Or add via https://chainlist.org/?search=bot+chain&testnets=true.
 
 ## License
 

@@ -40,7 +40,8 @@ module.exports = {
       accounts,
     },
     botTestnet: {
-      // The integration guide gives the testnet chain ID (968) but no RPC URL.
+      // Testnet-first: fill TESTNET_RPC_URL in .env (chain ID 968).
+      // The integration guide publishes no testnet RPC, so there is no default.
       url: process.env.TESTNET_RPC_URL || "",
       chainId: 968,
       accounts,

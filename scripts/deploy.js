@@ -4,6 +4,12 @@ const hre = require("hardhat");
 
 async function main() {
   const { ethers, network } = hre;
+  if (!hre.network.config.url) {
+    throw new Error(
+      `No RPC URL for network "${network.name}". Set TESTNET_RPC_URL in .env ` +
+      `(BOT Chain testnet, chain ID 968) and retry.`
+    );
+  }
   const [deployer] = await ethers.getSigners();
   if (!deployer) throw new Error("No deployer account. Set PRIVATE_KEY in .env");
 

@@ -27,17 +27,17 @@ BOT Chain is EVM-compatible. Any EVM wallet works (MetaMask, OKX, Bitget, TokenP
 
 **Option A — Chainlist:** visit https://chainlist.org/?search=bot+chain&testnets=true, connect, add BOT Chain.
 
-**Option B — manual:**
+**Option B — manual (testnet):**
 
-| Field | Mainnet |
+| Field | BOT Chain Testnet |
 |---|---|
-| Network name | BOT Chain |
-| RPC URL | https://rpc.botchain.ai |
-| Chain ID | 677 |
+| Network name | BOT Chain Testnet |
+| RPC URL | Your testnet endpoint (`TESTNET_RPC_URL`) |
+| Chain ID | 968 |
 | Currency symbol | BOT |
 | Explorer | https://scan.botchain.ai |
 
-Testnet chain ID is 968 (no official RPC in the integration guide — set `TESTNET_RPC_URL` yourself if you have one). Get test BOT at https://faucet.botchain.ai.
+Get test BOT at https://faucet.botchain.ai. Mainnet (chain ID 677, RPC https://rpc.botchain.ai) is parked until testnet validation is complete.
 
 ## Path 1: try it locally (no wallet, no funds)
 
@@ -51,20 +51,20 @@ If Hardhat cannot download its compiler on your network, prefix with `USE_SOLCJS
 
 ## Path 2: deploy to BOT Chain
 
-1. `cp .env.example .env` and fill in a **dedicated deployer key** (never your main wallet).
-2. Testnet first (if you have an RPC): set `TESTNET_RPC_URL` (chain ID 968), get test BOT from the faucet, then `npm run deploy:testnet`.
-3. Mainnet: `npm run deploy:mainnet` (RPC https://rpc.botchain.ai, chain ID 677).
-4. Addresses land in `deployments/<network>.json`. Verify with `npm run verify:mainnet` (needs an Etherscan-compatible API; otherwise verify manually at https://scan.botchain.ai with `npx hardhat flatten` output).
-5. Exercise every function on testnet (deposit, policy, pay, revoke, withdraw, receipts) before touching mainnet.
-6. Read `SECURITY.md`. The contracts are **unaudited**; only use amounts you can afford to lose.
+1. `cp .env.example .env` and fill in a **dedicated deployer key** (never your main wallet) plus `TESTNET_RPC_URL` (chain ID 968).
+2. Get test BOT from https://faucet.botchain.ai, then `npm run deploy` (testnet).
+3. Addresses land in `deployments/botTestnet.json`. Verify with `npm run verify` (needs an Etherscan-compatible API; otherwise verify manually on the explorer with `npx hardhat flatten` output).
+4. Exercise every function on testnet (deposit, policy, pay, revoke, withdraw, receipts) before even thinking about mainnet.
+5. Mainnet deploy (`npm run deploy:mainnet`, chain ID 677) stays parked until testnet validation is complete.
+6. Read `SECURITY.md`. The contracts are **unaudited**; testnet only for now.
 
-Key addresses (verify on https://scan.botchain.ai before use):
+Key addresses (verify on the explorer before use):
 
-| | Mainnet |
+| | Testnet (968) |
 |---|---|
-| WBOT | `0xD5452816194a3784dBa983426cCe7c122F4abd30` |
-| USDT | `0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C` |
-| BDEX Universal Router | `0xaE6ae8630f7A888dEc0B9195C85F7515d5887655` |
+| BDEX Universal Router | `0x73Be0A1d8011B335A7aBeF6c45544E8ca4448AB5` |
+
+Mainnet addresses (WBOT, USDT, mainnet router) are parked in `config/bdex.json` until launch.
 
 ## Using the owner console
 
@@ -107,7 +107,7 @@ A receipt proves that this exact prompt and output hash were committed by this a
 | Message | Meaning | Fix |
 |---|---|---|
 | No wallet found | No EVM wallet detected | Install MetaMask / OKX / Bitget / TokenPocket |
-| Wrong network | Wallet is not on 677 | Press Switch, or add BOT Chain manually |
+| Wrong network | Wallet is not on 968 | Press Switch, or add BOT Chain Testnet manually |
 | Amount … is not valid | Bad amount string | Use plain decimals, e.g. `1.5` |
 | No policy / Set a policy first | Agent + token has no `dailyLimit` | Call `setPolicy` for that agent + token |
 | Not enabled (or was revoked) | `agentEnabled` is false | Save a new policy, or check you used the right owner |

@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.1.2 (testnet-first)
+
+Testnet-only. No contract changes.
+
+- Frontend targets BOT Chain Testnet (968); mainnet config parked in `BOT_MAINNET`.
+- Testnet RPC comes from `VITE_TESTNET_RPC_URL`; auto-add falls back to a manual-setup message when unset.
+- `npm run deploy` / `npm run verify` default to testnet; deploy script errors clearly when `TESTNET_RPC_URL` is missing.
+- Docs (README, GUIDE, `.env.example` files) rewritten testnet-first; mainnet parked until testnet validation.
+- Removed remaining em dashes in app copy.
+
 ## v0.1.1 (polish)
 
 Frontend + docs polish. No contract changes (no re-audit surface).

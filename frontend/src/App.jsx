@@ -115,7 +115,7 @@ export default function App() {
             ) : wallet ? (
               <>
                 <div className={"pill " + (wrongChain ? "bad" : "good")} title={wallet.address}>
-                  {wrongChain ? `Wrong network (${wallet.chainId})` : `BOT Chain · ${short(wallet.address)}`}
+                  {wrongChain ? `Wrong network (${wallet.chainId})` : `BOT Testnet · ${short(wallet.address)}`}
                 </div>
                 {wrongChain && <button className="ghost" onClick={switchNetwork}>Switch</button>}
                 <button className="ghost" onClick={() => setWallet(null)}>Disconnect</button>
@@ -136,7 +136,7 @@ export default function App() {
               <div>
                 <button className="back-link" onClick={() => setRoute("landing")}>← Back to overview</button>
                 <h2>Owner console</h2>
-                <p className="muted" style={{ margin: "4px 0 0" }}>Deposits, agent budgets, allowlists and receipt verification on BOT Chain (677).</p>
+                <p className="muted" style={{ margin: "4px 0 0" }}>Deposits, agent budgets, allowlists and receipt verification on BOT Chain Testnet (968).</p>
               </div>
               {!wallet && <button onClick={connect}>Connect wallet</button>}
             </div>
@@ -146,15 +146,15 @@ export default function App() {
                 label="AgentVault address"
                 value={vaultAddr}
                 onChange={setVaultAddr}
-                placeholder="0x… (from deployments/botMainnet.json)"
-                hint={isAddress(vaultAddr) ? null : "Paste a deployed AgentVault address, or deploy first with npm run deploy:mainnet."}
+                placeholder="0x… (from deployments/botTestnet.json)"
+                hint={isAddress(vaultAddr) ? null : "Paste a deployed AgentVault address, or deploy first with npm run deploy:testnet."}
               />
               {isAddress(vaultAddr) && <ExplorerLink addr={vaultAddr} />}
               <Field
                 label="ProofOfThought address"
                 value={potAddr}
                 onChange={setPotAddr}
-                placeholder="0x… (from deployments/botMainnet.json)"
+                placeholder="0x… (from deployments/botTestnet.json)"
                 hint={isAddress(potAddr) ? null : "Paste a deployed ProofOfThought address."}
               />
               {isAddress(potAddr) && <ExplorerLink addr={potAddr} />}
@@ -169,10 +169,10 @@ export default function App() {
             {status.msg && <div className={"status " + status.kind} role="status">{status.msg}</div>}
 
             {!wallet ? (
-              <p className="muted">Connect a wallet to continue. BotGuard runs on BOT Chain (chain ID 677).</p>
+              <p className="muted">Connect a wallet to continue. BotGuard runs on BOT Chain Testnet (chain ID 968).</p>
             ) : wrongChain ? (
               <p className="muted">
-                You are on chain {wallet.chainId}. <button className="ghost" onClick={switchNetwork}>Switch to BOT Chain (677)</button> to continue.
+                You are on chain {wallet.chainId}. <button className="ghost" onClick={switchNetwork}>Switch to BOT Chain Testnet (968)</button> to continue.
               </p>
             ) : tab === "receipts" ? (
               <Receipts pot={pot} />
@@ -187,7 +187,7 @@ export default function App() {
         )}
 
         <footer className="site-footer">
-          <span>BotGuard · unaudited pre-release — use only what you can afford to lose.</span>
+          <span>BotGuard · testnet pre-release, use test BOT only.</span>
           <a href="https://www.botchain.ai" target="_blank" rel="noreferrer">Website</a>
           <a href={EXPLORER} target="_blank" rel="noreferrer">Explorer</a>
           <a href="https://faucet.botchain.ai" target="_blank" rel="noreferrer">Faucet</a>
@@ -310,7 +310,7 @@ function VaultTab({ vault, wallet, vaultAddr, run, busy }) {
         <button onClick={deposit} disabled={!amount.trim() || busy}>Deposit</button>
         <button className="ghost" onClick={withdraw} disabled={!amount.trim() || busy}>Withdraw</button>
       </div>
-      <p className="muted">Never send BOT directly to the vault address — always use Deposit.</p>
+      <p className="muted">Never send BOT directly to the vault address. Always use Deposit.</p>
     </section>
   );
 }
@@ -453,7 +453,7 @@ function Receipts({ pot }) {
     <>
       <section className="card">
         <h2>Verify an AI answer</h2>
-        <p className="muted">Paste the exact prompt and output. Only keccak256 hashes are compared on-chain — content never leaves your browser.{count ? ` ${count} receipt(s) committed so far.` : ""}</p>
+        <p className="muted">Paste the exact prompt and output. Only keccak256 hashes are compared on-chain, so content never leaves your browser.{count ? ` ${count} receipt(s) committed so far.` : ""}</p>
         <label className="field"><span>Prompt</span><textarea rows={3} value={text.prompt} onChange={(e) => setText({ ...text, prompt: e.target.value })} placeholder="Exact prompt text…" /></label>
         <label className="field"><span>Output</span><textarea rows={3} value={text.output} onChange={(e) => setText({ ...text, output: e.target.value })} placeholder="Exact model output…" /></label>
         {(hashes.p || hashes.o) && (

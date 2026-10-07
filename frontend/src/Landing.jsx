@@ -6,7 +6,7 @@ export default function Landing({ onLaunch }) {
       <section className="hero">
         <div className="hero-grid">
           <div>
-            <span className="eyebrow"><span className="dot" /> BOT Chain · Chain ID 677 · EVM Layer 1</span>
+            <span className="eyebrow"><span className="dot" /> BOT Chain Testnet · Chain ID 968 · EVM Layer 1</span>
             <h1 className="hero-title">Give AI agents a budget, <span>not your keys.</span></h1>
             <p className="hero-sub">
               BotGuard is a non-custodial allowance layer for AI agents on BOT Chain.
@@ -42,7 +42,7 @@ export default function Landing({ onLaunch }) {
 
       <div className="trustbar">
         <span>Built for</span>
-        <span className="t-pill">BOT Chain mainnet · 677</span>
+        <span className="t-pill">BOT Chain testnet · 968</span>
         <span className="t-pill">WBOT · USDT</span>
         <span className="t-pill">BDEX swaps</span>
         <span className="t-pill">Proof-of-Thought receipts</span>
@@ -79,11 +79,11 @@ export default function Landing({ onLaunch }) {
 
       <section className="section">
         <div className="section-head">
-          <h2>BOT Chain, ready out of the box</h2>
-          <p>Defaults, addresses and explorer wiring ship preconfigured. Confirm router ABIs on-chain before mainnet funds.</p>
+          <h2>BOT Chain testnet, ready out of the box</h2>
+          <p>Defaults, addresses and explorer wiring ship preconfigured for testnet. Mainnet comes later, after testnet validation.</p>
         </div>
         <div className="ref-grid">
-          <div className="ref"><h3>Network</h3><p>RPC <span className="mono">https://rpc.botchain.ai</span><br />Chain ID <strong>677</strong> · Symbol <strong>BOT</strong></p></div>
+          <div className="ref"><h3>Network</h3><p>BOT Chain Testnet<br />Chain ID <strong>968</strong> · Symbol <strong>BOT</strong></p></div>
           <div className="ref"><h3>Assets</h3><p><span className="mono">WBOT 0xD545…bd30</span><br /><span className="mono">USDT 0xaBab…87a3C</span></p></div>
           <div className="ref"><h3>Verify</h3><p><a href={EXPLORER} target="_blank" rel="noreferrer">Block explorer ↗</a><br /><a href="https://faucet.botchain.ai" target="_blank" rel="noreferrer">Testnet faucet ↗</a> · <a href="https://dex.botchain.ai/#/swap" target="_blank" rel="noreferrer">DEX ↗</a></p></div>
         </div>
@@ -92,7 +92,7 @@ export default function Landing({ onLaunch }) {
       <section className="cta-band">
         <div>
           <h2>Put your first agent on a budget today</h2>
-          <p>Connect a wallet, paste your deployment addresses, and set a policy. Testnet first. Mainnet only with amounts you can afford to lose.</p>
+          <p>Deploy to testnet, paste your deployment addresses, and set a policy. Use test BOT from the faucet. Mainnet only after testnet validation.</p>
         </div>
         <div className="cta-row">
           <button onClick={onLaunch}>Open the console</button>

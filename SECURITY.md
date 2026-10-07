@@ -25,12 +25,13 @@
 
 - The SDK's pre-flight checks are a convenience for honest agents, not a trust boundary. The contracts are the only enforcement.
 
-## Pre-mainnet checklist
+## Pre-testnet checklist
 - [x] `npm test` passes (45 tests, mocks only)
+- [ ] Set `TESTNET_RPC_URL`, fund deployer with test BOT from the faucet
+- [ ] Deploy to testnet and exercise every function
 - [ ] Run Slither (`slither .`) and resolve findings
 - [ ] Add fuzz/invariant tests (balances never negative, spend never exceeds limits)
-- [ ] Deploy to testnet and exercise every function
-- [ ] Independent review or audit
+- [ ] Independent review or audit before any mainnet use
 
 ## Reporting
 Open a private security advisory on the repository.
