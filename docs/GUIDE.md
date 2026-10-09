@@ -68,6 +68,8 @@ Mainnet addresses (WBOT, USDT, mainnet router) are parked in `config/bdex.json` 
 
 ## Using the owner console
 
+Live: https://botguard-two.vercel.app/ (BOT Chain Testnet).
+
 ```bash
 cd frontend && npm install
 cp .env.example .env.local     # VITE_VAULT_ADDRESS, VITE_POT_ADDRESS

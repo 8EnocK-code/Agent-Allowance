@@ -5,6 +5,8 @@ A safe wallet layer for AI agents on **BOT Chain testnet** (EVM, chain ID 968). 
 - **AgentVault**: deposit BOT or ERC-20s, give an agent a hard budget (per-transaction cap, rolling 24h limit, destination allowlist, optional expiry). The agent never holds your keys. Revoke instantly, withdraw any time.
 - **ProofOfThought**: agents commit hashes of prompt + output on-chain, so anyone can later verify an AI answer existed, unaltered, at a given time. Only hashes are stored.
 
+**Live demo (BOT Chain Testnet): https://botguard-two.vercel.app/**
+
 ## Status
 
 | Phase | Scope | State |
